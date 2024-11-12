@@ -1,0 +1,29 @@
+﻿@page "/quotes/{user}/delete/{id:int}"
+
+@using System.Net.Http
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<h1>Delete Quote</h1>
+<h2>User: @User</h2>
+
+<NavLink href=@{"/quotes/" + @User}>Back to your quotes</NavLink>
+<br />
+
+<h3>Are you sure you want to delete this quote? <span class="alertmessage">This action cannot be undone.</span></h3>
+
+<button type="submit" @onclick="Delete">Delete</button>
+
+@code {
+    [Parameter]
+    public string? User { get; set; }
+    [Parameter]
+    public int? Id { get; set; }
+
+    private async Task Delete()
+    {
+        await Http.DeleteAsync("/quotes/" + User + "/" + Id);
+        NavigationManager.NavigateTo("/quotes/" + User);
+    }
+}

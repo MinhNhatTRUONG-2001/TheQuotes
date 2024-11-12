@@ -1,0 +1,52 @@
+﻿@page "/quotes/{user}/add"
+
+@using System.Net.Http
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<h1>Add New Quote</h1>
+<h2>User: @User</h2>
+
+<NavLink href=@{"/quotes/" + @User}>Back to your quotes</NavLink>
+<br />
+
+<EditForm Model="@newQuote" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <p>
+        <label>
+            The Quote:
+            <InputText @bind-Value="newQuote.Quote" />
+        </label>
+    </p>
+    <p>
+        <label>
+            Who Said The Quote:
+            <InputText @bind-Value="newQuote.SaidBy" />
+        </label>
+    </p>
+    <p>
+        <label>
+            When The Quote Was Said:
+            <InputDate @bind-Value="when" />
+        </label>
+    </p>
+
+    <button type="submit">Add</button>
+</EditForm>
+
+@code {
+    [Parameter]
+    public string? User { get; set; }
+    public QuoteDTO newQuote = new QuoteDTO();
+    public DateTime when;
+
+    protected async Task HandleValidSubmit()
+    {
+        newQuote.When = when.ToString("yyyy-MM-dd");
+        await Http.PostAsJsonAsync("/quotes/" + User, newQuote);
+        NavigationManager.NavigateTo("/quotes/" + User);
+    }
+}

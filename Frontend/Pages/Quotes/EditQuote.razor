@@ -1,0 +1,64 @@
+﻿@page "/quotes/{user}/edit/{id:int}"
+
+@using System.Net.Http
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<h1>Edit Quote</h1>
+<h2>User: @User</h2>
+
+<NavLink href=@{"/quotes/" + @User}>Back to your quotes</NavLink>
+<br />
+
+@if (editedQuote != null)
+{
+    <EditForm Model="@editedQuote" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <p>
+            <label>
+                The Quote:
+                <InputText @bind-Value="editedQuote.Quote" />
+            </label>
+        </p>
+        <p>
+            <label>
+                Who Said The Quote:
+                <InputText @bind-Value="editedQuote.SaidBy" />
+            </label>
+        </p>
+        <p>
+            <label>
+                When The Quote Was Said:
+                <InputDate @bind-Value="when" />
+            </label>
+        </p>
+
+        <button type="submit">Edit</button>
+    </EditForm>
+}
+
+
+@code {
+    [Parameter]
+    public string? User { get; set; }
+    [Parameter]
+    public int? Id { get; set; }
+    public QuoteDTO? editedQuote;
+    public DateTime when; // for type casting of the "When The Quote Was Said" field
+
+    protected override async Task OnInitializedAsync()
+    {
+        editedQuote = await Http.GetFromJsonAsync<QuoteDTO>("/quotes/" + User + "/" + Id);
+        when = DateTime.Parse(editedQuote.When);
+    }
+
+    protected async Task HandleValidSubmit()
+    {
+        editedQuote.When = when.ToString("yyyy-MM-dd");
+        await Http.PutAsJsonAsync("/quotes/" + User + "/" + Id, editedQuote);
+        NavigationManager.NavigateTo("/quotes/" + User);
+    }
+}

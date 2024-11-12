@@ -1,0 +1,28 @@
+﻿@inject NavigationManager NavigationManager
+
+@page "/login"
+
+<h2>Login</h2>
+
+<p>Write your username here:</p>
+<input type="text" @bind="User" />
+<button @onclick="HandleValidSubmit">Login</button>
+<br>
+<p class="alertmessage">@ErrorMessage</p>
+
+@code {
+    private string? User { get; set; }
+    private string ErrorMessage = "";
+
+    protected void HandleValidSubmit()
+    {
+        if (!string.IsNullOrEmpty(User))
+        {
+            NavigationManager.NavigateTo("/quotes/" + User);
+        }
+        else
+        {
+            ErrorMessage = "Please write something!";
+        }
+    }
+}

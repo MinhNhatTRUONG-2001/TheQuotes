@@ -1,0 +1,32 @@
+﻿@page "/quotes/{user}"
+
+@using System.Net.Http
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<h2>Quotes of @User</h2>
+
+<NavLink href=@{
+    "/quotes/" + @User + "/add"
+}>Add new quote</NavLink>
+
+@if (userQuotes != null)
+{
+    @foreach (var quote in userQuotes)
+    {
+        EditLink = "/quotes/" + @User + "/edit/" + quote.Id;
+        DeleteLink = "/quotes/" + @User + "/delete/" + quote.Id;
+        <QuoteItem Quote=quote EditLink=@EditLink DeleteLink="@DeleteLink" />
+    }
+}
+
+@code {
+    [Parameter]
+    public string? User { get; set; }
+    private List<QuoteDTO>? userQuotes;
+    private string? EditLink;
+    private string? DeleteLink;
+
+    protected override async Task OnInitializedAsync() =>
+        userQuotes = await Http.GetFromJsonAsync<List<QuoteDTO>>("quotes/" + User);
+}
