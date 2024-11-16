@@ -41,7 +41,7 @@
     [Parameter]
     public string? User { get; set; }
     public QuoteDTO newQuote = new QuoteDTO();
-    public DateTime when;
+    public DateTime when = DateTime.Now;
 
     protected async Task HandleValidSubmit()
     {

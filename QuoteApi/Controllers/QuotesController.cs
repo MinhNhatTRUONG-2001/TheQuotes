@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuoteApi.Data;
 
@@ -29,7 +24,7 @@ namespace QuoteApi.Controllers
                 return NotFound();
             }
             var top5Quotes = await _context.Quotes
-                            .OrderByDescending(q => q.QuoteCreateDate)
+                            .OrderByDescending(q => q.creation_date)
                             .Take(5)
                             .ToListAsync();
             if (top5Quotes == null)
@@ -40,26 +35,26 @@ namespace QuoteApi.Controllers
             foreach (var quote in top5Quotes)
             {
                 QuoteDTO quoteDto = new QuoteDTO();
-                quoteDto.Id = quote.Id;
-                quoteDto.Quote = quote.TheQuote;
-                quoteDto.SaidBy = quote.WhoSaid;
-                quoteDto.When = quote.WhenWasSaid.ToString("yyyy-MM-dd");
+                quoteDto.Id = quote.id;
+                quoteDto.Quote = quote.the_quote;
+                quoteDto.SaidBy = quote.who_said;
+                quoteDto.When = quote.when_was_said.ToString("yyyy-MM-dd");
                 top5QuotesDto.Add(quoteDto);
             }
             return top5QuotesDto;
         }
 
         // GET: quotes/Violet
-        [HttpGet("{creator}")]
-        public async Task<ActionResult<List<QuoteDTO>>> GetQuotes(string creator)
+        [HttpGet("{creator_id}")]
+        public async Task<ActionResult<List<QuoteDTO>>> GetQuotes(int creator_id)
         {
             if (_context.Quotes == null)
             {
                 return NotFound();
             }
             var quoteDto = await _context.Quotes
-                        .Where(q => q.QuoteCreator.ToLower() == creator.ToLower())
-                        .Select(q => new QuoteDTO { Id = q.Id, Quote = q.TheQuote, SaidBy = q.WhoSaid, When = q.WhenWasSaid.ToString("yyyy-MM-dd") })
+                        .Where(q => q.user_id == creator_id)
+                        .Select(q => new QuoteDTO { Id = q.id, Quote = q.the_quote, SaidBy = q.who_said, When = q.when_was_said.ToString("yyyy-MM-dd") })
                         .ToListAsync();
 
             if (quoteDto == null)
@@ -71,8 +66,8 @@ namespace QuoteApi.Controllers
         }
 
         // GET: quotes/Violet/22
-        [HttpGet("{creator}/{id}")]
-        public async Task<ActionResult<QuoteDTO>> GetQuote(string creator, int id)
+        [HttpGet("{creator_id}/{id}")]
+        public async Task<ActionResult<QuoteDTO>> GetQuote(int creator_id, int id)
         {
             if (_context.Quotes == null)
             {
@@ -80,23 +75,23 @@ namespace QuoteApi.Controllers
             }
             var quote = await _context.Quotes.FindAsync(id);
 
-            if (quote == null || quote.QuoteCreatorNormalized != creator.ToUpper())
+            if (quote == null || quote.user_id != creator_id)
             {
                 return NotFound();
             }
 
             QuoteDTO quoteDto = new QuoteDTO();
-            quoteDto.Id = quote.Id;
-            quoteDto.Quote = quote.TheQuote;
-            quoteDto.SaidBy = quote.WhoSaid;
-            quoteDto.When = quote.WhenWasSaid.ToString("yyyy-MM-dd");
+            quoteDto.Id = quote.id;
+            quoteDto.Quote = quote.the_quote;
+            quoteDto.SaidBy = quote.who_said;
+            quoteDto.When = quote.when_was_said.ToString("yyyy-MM-dd");
             return quoteDto;
         }
 
         // PUT: quotes/Violet/22
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{creator}/{id}")]
-        public async Task<IActionResult> PutQuote(string creator, int id, QuoteDTO quoteDto)
+        [HttpPut("{creator_id}/{id}")]
+        public async Task<IActionResult> PutQuote(int creator_id, int id, QuoteDTO quoteDto)
         {
             if (_context.Quotes == null)
             {
@@ -105,14 +100,14 @@ namespace QuoteApi.Controllers
 
             var quote = await _context.Quotes.FindAsync(id);
 
-            if (quote == null || quote.QuoteCreatorNormalized != creator.ToUpper())
+            if (quote == null || quote.user_id != creator_id)
             {
                 return NotFound();
             }
 
-            quote.TheQuote = quoteDto.Quote;
-            quote.WhoSaid = quoteDto.SaidBy;
-            quote.WhenWasSaid = DateTime.Parse(quoteDto.When);
+            quote.the_quote = quoteDto.Quote;
+            quote.who_said = quoteDto.SaidBy;
+            quote.when_was_said = DateOnly.Parse(quoteDto.When);
 
             _context.Entry(quote).State = EntityState.Modified;
 
@@ -137,28 +132,28 @@ namespace QuoteApi.Controllers
 
         // POST: quotes/Violet
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost("{creator}")]
-        public async Task<ActionResult<QuoteDTO>> PostQuote(string creator, QuoteDTO quoteDto)
+        [HttpPost("{creator_id}")]
+        public async Task<ActionResult<QuoteDTO>> PostQuote(int creator_id, QuoteDTO quoteDto)
         {
             if (_context.Quotes == null)
             {
                 return Problem("Entity set 'QuoteContext.Quotes'  is null.");
             }
             Quote quote = new Quote();
-            quote.TheQuote = quoteDto.Quote;
-            quote.WhoSaid = quoteDto.SaidBy;
-            quote.WhenWasSaid = DateTime.Parse(quoteDto.When);
-            quote.QuoteCreator = creator;
-            quote.QuoteCreateDate = DateTime.Now;
+            quote.the_quote = quoteDto.Quote;
+            quote.who_said = quoteDto.SaidBy;
+            quote.when_was_said = DateOnly.Parse(quoteDto.When);
+            quote.user_id = creator_id;
+            quote.creation_date = DateTime.Now;
             _context.Quotes.Add(quote);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetQuote), new { creator = quote.QuoteCreator, id = quote.Id }, quote);
+            return CreatedAtAction(nameof(GetQuote), new { creator_id = quote.user_id, quote.id }, quote);
         }
 
         // DELETE: quotes/Violet/22
         [HttpDelete("{creator}/{id}")]
-        public async Task<IActionResult> DeleteQuote(string creator, int id)
+        public async Task<IActionResult> DeleteQuote(int creator_id, int id)
         {
             if (_context.Quotes == null)
             {
@@ -167,7 +162,7 @@ namespace QuoteApi.Controllers
 
             var quote = await _context.Quotes.FindAsync(id);
 
-            if (quote == null || quote.QuoteCreatorNormalized != creator.ToUpper())
+            if (quote == null || quote.user_id != creator_id)
             {
                 return NotFound();
             }
@@ -180,7 +175,7 @@ namespace QuoteApi.Controllers
 
         private bool QuoteExists(int id)
         {
-            return (_context.Quotes?.Any(e => e.Id == id)).GetValueOrDefault();
+            return (_context.Quotes?.Any(q => q.id == id)).GetValueOrDefault();
         }
     }
 }

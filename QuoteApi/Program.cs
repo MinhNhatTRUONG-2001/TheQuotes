@@ -1,11 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using QuoteApi.Data;
+using Npgsql;
 
 namespace QuoteApi;
 
-// DO NOT remove the Program class declaration or the Main method. These are needed for the tests.
-
-// DO edit the content of Main method to handle the task requirements.
 public class Program
 {
     public static void Main(string[] args)
@@ -14,9 +12,12 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container.
-        var connectionString = builder.Configuration.GetConnectionString("QuoteDb");
+        var connectionStringBuilder = new NpgsqlConnectionStringBuilder(
+            builder.Configuration.GetConnectionString("QuoteDb"));
+        connectionStringBuilder.Password = Environment.GetEnvironmentVariable("DATABASE_PASSWORD");
+        var connectionString = connectionStringBuilder.ConnectionString;
         builder.Services.AddDbContext<QuoteContext>(options =>
-            options.UseSqlite(connectionString));
+            options.UseNpgsql(connectionString));
         builder.Services.AddCors(options => {
             options.AddDefaultPolicy(p => {
                 p.AllowAnyHeader();
@@ -33,11 +34,11 @@ public class Program
         var app = builder.Build();
 
         //Add initial data to the database when the app starts running
-        using (var serviceScope = app.Services.CreateScope())
+        /*using (var serviceScope = app.Services.CreateScope())
         {
             var services = serviceScope.ServiceProvider;
             InitializeTheDatabase(app.Environment, services.GetRequiredService<QuoteContext>());
-        }
+        }*/
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
@@ -56,7 +57,7 @@ public class Program
 
         app.Run();
 
-        void InitializeTheDatabase(IWebHostEnvironment env, QuoteContext db)
+        /*void InitializeTheDatabase(IWebHostEnvironment env, QuoteContext db)
         {
             if (env.IsDevelopment())
             {
@@ -104,6 +105,6 @@ public class Program
                     db.SaveChanges();
                 }
             }
-        }
+        }*/
     }
 }
