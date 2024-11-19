@@ -1,4 +1,4 @@
-﻿namespace QuoteApi;
+﻿namespace QuoteApi.DTOs;
 public class QuoteDTO
 {
     public int Id { get; set; }

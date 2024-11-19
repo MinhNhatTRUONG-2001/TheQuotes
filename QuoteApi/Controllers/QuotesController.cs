@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuoteApi.Data;
+using QuoteApi.DTOs;
 
 namespace QuoteApi.Controllers
 {
@@ -137,7 +138,7 @@ namespace QuoteApi.Controllers
         {
             if (_context.Quotes == null)
             {
-                return Problem("Entity set 'QuoteContext.Quotes'  is null.");
+                return NotFound();
             }
             Quote quote = new Quote();
             quote.the_quote = quoteDto.Quote;
