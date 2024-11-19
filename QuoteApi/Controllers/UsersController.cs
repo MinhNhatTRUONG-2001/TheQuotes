@@ -1,6 +1,6 @@
 ﻿using Isopoh.Cryptography.Argon2;
 using Isopoh.Cryptography.SecureArray;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -58,15 +58,7 @@ namespace QuoteApi.Controllers
                 var newUser = new User();
                 newUser.username = userDTO.Username;
                 newUser.displayed_name = userDTO.DisplayedName;
-                byte[] salt = new byte[16];
-                new Random().NextBytes(salt);
-                var argon2Config = new Argon2Config { Password = Encoding.UTF8.GetBytes(userDTO.Password), Salt = salt };
-                var argon2 = new Argon2(argon2Config);
-                string hashedPassword;
-                using (SecureArray<byte> hash = argon2.Hash())
-                {
-                    hashedPassword = argon2Config.EncodeString(hash.Buffer);
-                }
+                string hashedPassword = HashPassword(userDTO.Password);
                 newUser.password = hashedPassword;
                 _context.Users.Add(newUser);
                 await _context.SaveChangesAsync();
@@ -102,32 +94,114 @@ namespace QuoteApi.Controllers
             }
         }
 
-        // GET api/<UsersController>/5
-        [HttpGet("info/{id}")]
-        public string GetUserInfo(int id)
+        // GET users/info
+        [Authorize]
+        [HttpGet("info")]
+        public async Task<ActionResult<UserDTO>> GetUserInfo([FromHeader] string token = "")
         {
-            throw new NotImplementedException();
+            if (_context.Users == null)
+            {
+                return NotFound();
+            }
+            int id = GetUserIdFromToken(token);
+            var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
+            if (user == null)
+            {
+                return NotFound();
+            }
+            else
+            {
+                return new UserDTO { Username = user.username, DisplayedName = user.displayed_name };
+            }
         }
 
-        // POST api/<UsersController>
-        [HttpPost]
-        public void ChangeDisplayedName([FromBody] string value)
+        // PUT users/change_info
+        [Authorize]
+        [HttpPut("change_info")]
+        public async Task<IActionResult> ChangeUserInfo(UserDTO userDTO, [FromHeader] string token = "")
         {
-            throw new NotImplementedException();
+            if (_context.Users == null)
+            {
+                return NotFound();
+            }
+            if (userDTO.DisplayedName == null || userDTO.DisplayedName.Trim() == "" || userDTO.DisplayedName.Length > 50)
+            {
+                return BadRequest("Displayed name is empty or invalid.");
+            }
+            int id = GetUserIdFromToken(token);
+            var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
+            if (user == null)
+            {
+                return NotFound();
+            }
+            else
+            {
+                user.displayed_name = userDTO.DisplayedName;
+                _context.Entry(user).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
         }
 
-        // PUT api/<UsersController>/5
-        [HttpPut("{id}")]
-        public void ChangePassword(int id, [FromBody] string value)
+        // PUT users/change_password
+        [Authorize]
+        [HttpPut("change_password")]
+        public async Task<IActionResult> ChangePassword(UserDTO userDTO, [FromHeader] string token = "")
         {
-            throw new NotImplementedException();
+            if (_context.Users == null)
+            {
+                return NotFound();
+            }
+            if (userDTO.Password == null || userDTO.Password.Trim() == "" || !ValidatePassword(userDTO.Password))
+            {
+                return BadRequest("Password is empty or invalid.");
+            }
+            int id = GetUserIdFromToken(token);
+            var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
+            if (user != null && Argon2.Verify(user.password, userDTO.CurrentPassword))
+            {
+                if (Argon2.Verify(user.password, userDTO.CurrentPassword))
+                {
+                    string hashedPassword = HashPassword(userDTO.Password);
+                    user.password = hashedPassword;
+                    _context.Entry(user).State = EntityState.Modified;
+                    await _context.SaveChangesAsync();
+                    return NoContent();
+                }
+                else 
+                {
+                    return BadRequest("Current password is incorrect.");
+                }
+            }
+            else
+            {
+                return NotFound();
+            }
         }
 
-        // DELETE api/<UsersController>/5
-        [HttpDelete("{id}")]
-        public void DeleteAccount(int id)
+        // DELETE users
+        [Authorize]
+        [HttpDelete]
+        public async Task<IActionResult> DeleteAccount([FromHeader] string token = "")
         {
-            throw new NotImplementedException();
+            if (_context.Users == null || _context.Quotes == null)
+            {
+                return NotFound();
+            }
+            int id = GetUserIdFromToken(token);
+            var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
+            if (user == null)
+            {
+                return NotFound();
+            }
+            else
+            {
+                var quotes = _context.Quotes.Where(q => q.user_id == id).ToList();
+                _context.Quotes.RemoveRange(quotes);
+                _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
         }
 
         private bool ValidatePassword(string password = "")
@@ -163,6 +237,25 @@ namespace QuoteApi.Controllers
                 )
             );
             return new JwtSecurityTokenHandler().WriteToken(jwtToken);
+        }
+
+        private int GetUserIdFromToken(string token)
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var decodedToken = handler.ReadJwtToken(token);
+            return int.Parse(decodedToken.Claims.First(c => c.Type == "userId").Value);
+        }
+
+        private string HashPassword(string password)
+        {
+            byte[] salt = new byte[16];
+            new Random().NextBytes(salt);
+            var argon2Config = new Argon2Config { Password = Encoding.UTF8.GetBytes(password), Salt = salt };
+            var argon2 = new Argon2(argon2Config);
+            using (SecureArray<byte> hash = argon2.Hash())
+            {
+                return argon2Config.EncodeString(hash.Buffer);
+            }
         }
     }
 }
