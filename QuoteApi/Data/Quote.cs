@@ -7,7 +7,7 @@ namespace QuoteApi.Data
     {
         [Key]
         public int id { get; set; }
-        public string the_quote { get; set; }
+        public string quote_content { get; set; }
         public string who_said { get; set; }
         public DateOnly when_was_said { get; set; }
         public int user_id { get; set; }

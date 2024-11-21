@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using QuoteApi.Controllers.Helpers;
 using QuoteApi.Data;
 using QuoteApi.DTOs;
 using System.IdentityModel.Tokens.Jwt;
@@ -34,16 +35,15 @@ namespace QuoteApi.Controllers
             {
                 return NotFound();
             }
-            if (userDTO.Username == null || userDTO.DisplayedName == null || userDTO.Password == null
-                || userDTO.Username.Trim() == "" || userDTO.DisplayedName.Trim() == "" || userDTO.Password.Trim() == "")
+            if (string.IsNullOrWhiteSpace(userDTO.Username) || string.IsNullOrWhiteSpace(userDTO.DisplayedName) || string.IsNullOrWhiteSpace(userDTO.Password))
             {
                 return BadRequest("Username, displayed name or password is empty.");
             }
-            if (userDTO.Username.Length > 32 && userDTO.Username.All(Char.IsLetterOrDigit))
+            if (userDTO.Username.Trim().Length > 32 && userDTO.Username.Trim().All(Char.IsLetterOrDigit))
             {
                 return BadRequest("Invalid username.");
             }
-            if (userDTO.DisplayedName.Length > 50)
+            if (userDTO.DisplayedName.Trim().Length > 50)
             {
                 return BadRequest("Invalid displayed name.");
             }
@@ -52,12 +52,12 @@ namespace QuoteApi.Controllers
                 return BadRequest("Invalid password.");
             }
 
-            var user = await _context.Users.Where(u => u.username == userDTO.Username).FirstOrDefaultAsync();
+            var user = await _context.Users.Where(u => u.username == userDTO.Username.Trim()).FirstOrDefaultAsync();
             if (user == null)
             {
                 var newUser = new User();
-                newUser.username = userDTO.Username;
-                newUser.displayed_name = userDTO.DisplayedName;
+                newUser.username = userDTO.Username.Trim();
+                newUser.displayed_name = userDTO.DisplayedName.Trim();
                 string hashedPassword = HashPassword(userDTO.Password);
                 newUser.password = hashedPassword;
                 _context.Users.Add(newUser);
@@ -78,12 +78,11 @@ namespace QuoteApi.Controllers
             {
                 return NotFound();
             }
-            if (userDTO.Username == null || userDTO.Password == null
-                || userDTO.Username.Trim() == "" || userDTO.Password.Trim() == "")
+            if (string.IsNullOrWhiteSpace(userDTO.Username) || string.IsNullOrWhiteSpace(userDTO.Password))
             {
                 return BadRequest("Username or password is empty.");
             }
-            var user = await _context.Users.Where(u => u.username == userDTO.Username).FirstOrDefaultAsync();
+            var user = await _context.Users.Where(u => u.username == userDTO.Username.Trim()).FirstOrDefaultAsync();
             if (user != null && Argon2.Verify(user.password, userDTO.Password))
             {
                 return GenerateJwtToken(user);
@@ -97,13 +96,17 @@ namespace QuoteApi.Controllers
         // GET users/info
         [Authorize]
         [HttpGet("info")]
-        public async Task<ActionResult<UserDTO>> GetUserInfo([FromHeader] string token = "")
+        public async Task<ActionResult<UserDTO>> GetUserInfo([FromHeader(Name = "Authorization")] string token = "")
         {
             if (_context.Users == null)
             {
                 return NotFound();
             }
-            int id = GetUserIdFromToken(token);
+            if (token.Contains("Bearer "))
+            {
+                token = token.Split("Bearer ")[1];
+            }
+            int id = JwtTokenDecoder.GetUserIdFromToken(token);
             var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
             if (user == null)
             {
@@ -111,24 +114,28 @@ namespace QuoteApi.Controllers
             }
             else
             {
-                return new UserDTO { Username = user.username, DisplayedName = user.displayed_name };
+                return new UserDTO { Id = user.id, Username = user.username, DisplayedName = user.displayed_name };
             }
         }
 
         // PUT users/change_info
         [Authorize]
         [HttpPut("change_info")]
-        public async Task<IActionResult> ChangeUserInfo(UserDTO userDTO, [FromHeader] string token = "")
+        public async Task<IActionResult> ChangeUserInfo(UserDTO userDTO, [FromHeader(Name = "Authorization")] string token = "")
         {
             if (_context.Users == null)
             {
                 return NotFound();
             }
-            if (userDTO.DisplayedName == null || userDTO.DisplayedName.Trim() == "" || userDTO.DisplayedName.Length > 50)
+            if (token.Contains("Bearer "))
+            {
+                token = token.Split("Bearer ")[1];
+            }
+            if (string.IsNullOrWhiteSpace(userDTO.DisplayedName) || userDTO.DisplayedName.Trim().Length > 50)
             {
                 return BadRequest("Displayed name is empty or invalid.");
             }
-            int id = GetUserIdFromToken(token);
+            int id = JwtTokenDecoder.GetUserIdFromToken(token);
             var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
             if (user == null)
             {
@@ -136,7 +143,7 @@ namespace QuoteApi.Controllers
             }
             else
             {
-                user.displayed_name = userDTO.DisplayedName;
+                user.displayed_name = userDTO.DisplayedName.Trim();
                 _context.Entry(user).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
                 return NoContent();
@@ -146,17 +153,21 @@ namespace QuoteApi.Controllers
         // PUT users/change_password
         [Authorize]
         [HttpPut("change_password")]
-        public async Task<IActionResult> ChangePassword(UserDTO userDTO, [FromHeader] string token = "")
+        public async Task<IActionResult> ChangePassword(UserDTO userDTO, [FromHeader(Name = "Authorization")] string token = "")
         {
             if (_context.Users == null)
             {
                 return NotFound();
             }
-            if (userDTO.Password == null || userDTO.Password.Trim() == "" || !ValidatePassword(userDTO.Password))
+            if (token.Contains("Bearer "))
+            {
+                token = token.Split("Bearer ")[1];
+            }
+            if (string.IsNullOrWhiteSpace(userDTO.Password) || !ValidatePassword(userDTO.Password))
             {
                 return BadRequest("Password is empty or invalid.");
             }
-            int id = GetUserIdFromToken(token);
+            int id = JwtTokenDecoder.GetUserIdFromToken(token);
             var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
             if (user != null && Argon2.Verify(user.password, userDTO.CurrentPassword))
             {
@@ -182,13 +193,17 @@ namespace QuoteApi.Controllers
         // DELETE users
         [Authorize]
         [HttpDelete]
-        public async Task<IActionResult> DeleteAccount([FromHeader] string token = "")
+        public async Task<IActionResult> DeleteAccount([FromHeader(Name = "Authorization")] string token = "")
         {
             if (_context.Users == null || _context.Quotes == null)
             {
                 return NotFound();
             }
-            int id = GetUserIdFromToken(token);
+            if (token.Contains("Bearer "))
+            {
+                token = token.Split("Bearer ")[1];
+            }
+            int id = JwtTokenDecoder.GetUserIdFromToken(token);
             var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
             if (user == null)
             {
@@ -237,13 +252,6 @@ namespace QuoteApi.Controllers
                 )
             );
             return new JwtSecurityTokenHandler().WriteToken(jwtToken);
-        }
-
-        private int GetUserIdFromToken(string token)
-        {
-            var handler = new JwtSecurityTokenHandler();
-            var decodedToken = handler.ReadJwtToken(token);
-            return int.Parse(decodedToken.Claims.First(c => c.Type == "userId").Value);
         }
 
         private string HashPassword(string password)

@@ -5,4 +5,6 @@ public class QuoteDTO
     public string Quote { get; set; }
     public string SaidBy { get; set; }
     public string When { get; set; }
+    public UserDTO User { get; set; }
+    public string? CreatedOn { get; set; }
 }
