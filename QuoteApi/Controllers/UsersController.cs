@@ -96,7 +96,7 @@ namespace QuoteApi.Controllers
         // GET users/info
         [Authorize]
         [HttpGet("info")]
-        public async Task<ActionResult<UserDTO>> GetUserInfo([FromHeader(Name = "Authorization")] string token = "")
+        public async Task<ActionResult<UserInfoDTO>> GetUserInfo([FromHeader(Name = "Authorization")] string token = "")
         {
             if (_context.Users == null)
             {
@@ -106,7 +106,15 @@ namespace QuoteApi.Controllers
             {
                 token = token.Split("Bearer ")[1];
             }
-            int id = JwtTokenDecoder.GetUserIdFromToken(token);
+            int id;
+            try
+            {
+                id = JwtTokenDecoder.GetUserIdFromToken(token);
+            }
+            catch
+            {
+                return BadRequest("Invalid token.");
+            }
             var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
             if (user == null)
             {
@@ -114,14 +122,14 @@ namespace QuoteApi.Controllers
             }
             else
             {
-                return new UserDTO { Id = user.id, Username = user.username, DisplayedName = user.displayed_name };
+                return new UserInfoDTO { Id = user.id, Username = user.username, DisplayedName = user.displayed_name };
             }
         }
 
         // PUT users/change_info
         [Authorize]
         [HttpPut("change_info")]
-        public async Task<IActionResult> ChangeUserInfo(UserDTO userDTO, [FromHeader(Name = "Authorization")] string token = "")
+        public async Task<IActionResult> ChangeUserInfo(UserInfoDTO userDTO, [FromHeader(Name = "Authorization")] string token = "")
         {
             if (_context.Users == null)
             {
@@ -135,7 +143,15 @@ namespace QuoteApi.Controllers
             {
                 return BadRequest("Displayed name is empty or invalid.");
             }
-            int id = JwtTokenDecoder.GetUserIdFromToken(token);
+            int id;
+            try
+            {
+                id = JwtTokenDecoder.GetUserIdFromToken(token);
+            }
+            catch
+            {
+                return BadRequest("Invalid token.");
+            }
             var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
             if (user == null)
             {
@@ -167,7 +183,15 @@ namespace QuoteApi.Controllers
             {
                 return BadRequest("Password is empty or invalid.");
             }
-            int id = JwtTokenDecoder.GetUserIdFromToken(token);
+            int id;
+            try
+            {
+                id = JwtTokenDecoder.GetUserIdFromToken(token);
+            }
+            catch
+            {
+                return BadRequest("Invalid token.");
+            }
             var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
             if (user != null && Argon2.Verify(user.password, userDTO.CurrentPassword))
             {
@@ -193,7 +217,7 @@ namespace QuoteApi.Controllers
         // DELETE users
         [Authorize]
         [HttpDelete]
-        public async Task<IActionResult> DeleteAccount([FromHeader(Name = "Authorization")] string token = "")
+        public async Task<IActionResult> DeleteAccount(UserDTO userDTO, [FromHeader(Name = "Authorization")] string token = "")
         {
             if (_context.Users == null || _context.Quotes == null)
             {
@@ -203,7 +227,19 @@ namespace QuoteApi.Controllers
             {
                 token = token.Split("Bearer ")[1];
             }
-            int id = JwtTokenDecoder.GetUserIdFromToken(token);
+            int id;
+            try
+            {
+                id = JwtTokenDecoder.GetUserIdFromToken(token);
+            }
+            catch
+            {
+                return BadRequest("Invalid token.");
+            }
+            if (string.IsNullOrWhiteSpace(userDTO.Password))
+            {
+                return BadRequest("Password is empty.");
+            }
             var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
             if (user == null)
             {
@@ -211,11 +247,18 @@ namespace QuoteApi.Controllers
             }
             else
             {
-                var quotes = _context.Quotes.Where(q => q.user_id == id).ToList();
-                _context.Quotes.RemoveRange(quotes);
-                _context.Users.Remove(user);
-                await _context.SaveChangesAsync();
-                return NoContent();
+                if (Argon2.Verify(user.password, userDTO.Password))
+                {
+                    var quotes = _context.Quotes.Where(q => q.user_id == id).ToList();
+                    _context.Quotes.RemoveRange(quotes);
+                    _context.Users.Remove(user);
+                    await _context.SaveChangesAsync();
+                    return NoContent();
+                }
+                else
+                {
+                    return BadRequest("Password is incorrect.");
+                }
             }
         }
 

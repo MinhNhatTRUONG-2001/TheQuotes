@@ -27,6 +27,7 @@ namespace QuoteApi.Controllers
                 return NotFound();
             }
             var top5Quotes = await _context.Quotes
+                            .Include(q => q.User)
                             .OrderByDescending(q => q.creation_date)
                             .Take(5)
                             .ToListAsync();
@@ -42,7 +43,7 @@ namespace QuoteApi.Controllers
                 quoteDto.Quote = quote.quote_content;
                 quoteDto.SaidBy = quote.who_said;
                 quoteDto.When = quote.when_was_said.ToString("yyyy-MM-dd");
-                quoteDto.User = new UserDTO { Id = quote.User.id, Username = quote.User.username, DisplayedName = quote.User.displayed_name };
+                quoteDto.User = new UserInfoDTO { Id = quote.User.id, Username = quote.User.username, DisplayedName = quote.User.displayed_name };
                 quoteDto.CreatedOn = quote.creation_date.ToString("yyyy-MM-dd HH:mm");
                 top5QuotesDto.Add(quoteDto);
             }
@@ -64,7 +65,7 @@ namespace QuoteApi.Controllers
                             Quote = q.quote_content,
                             SaidBy = q.who_said,
                             When = q.when_was_said.ToString("yyyy-MM-dd"),
-                            User = new UserDTO { Id = q.User.id, Username = q.User.username, DisplayedName = q.User.displayed_name },
+                            User = new UserInfoDTO { Id = q.User.id, Username = q.User.username, DisplayedName = q.User.displayed_name },
                             CreatedOn = q.creation_date.ToString("yyyy-MM-dd HH:mm")
                         })
                         .ToListAsync();
@@ -85,9 +86,9 @@ namespace QuoteApi.Controllers
             {
                 return NotFound();
             }
-            var quote = await _context.Quotes.FindAsync(id);
+            var quote = await _context.Quotes.Include(q => q.User).FirstOrDefaultAsync(q => q.id == id && q.user_id == userId);
 
-            if (quote == null || quote.user_id != userId)
+            if (quote == null)
             {
                 return NotFound();
             }
@@ -97,7 +98,7 @@ namespace QuoteApi.Controllers
             quoteDto.Quote = quote.quote_content;
             quoteDto.SaidBy = quote.who_said;
             quoteDto.When = quote.when_was_said.ToString("yyyy-MM-dd");
-            quoteDto.User = new UserDTO { Id = quote.User.id, Username = quote.User.username, DisplayedName = quote.User.displayed_name };
+            quoteDto.User = new UserInfoDTO { Id = quote.User.id, Username = quote.User.username, DisplayedName = quote.User.displayed_name };
             quoteDto.CreatedOn = quote.creation_date.ToString("yyyy-MM-dd HH:mm");
             return quoteDto;
         }
@@ -159,7 +160,7 @@ namespace QuoteApi.Controllers
                 quoteDto.Quote = quote.quote_content;
                 quoteDto.SaidBy = quote.who_said;
                 quoteDto.When = quote.when_was_said.ToString("yyyy-MM-dd");
-                quoteDto.User = new UserDTO { Id = quote.User.id, Username = quote.User.username, DisplayedName = quote.User.displayed_name };
+                quoteDto.User = new UserInfoDTO { Id = quote.User.id, Username = quote.User.username, DisplayedName = quote.User.displayed_name };
                 quoteDto.CreatedOn = quote.creation_date.ToString("yyyy-MM-dd HH:mm");
                 quotesDto.Add(quoteDto);
             }
@@ -183,9 +184,13 @@ namespace QuoteApi.Controllers
 
             var quote = await _context.Quotes.FindAsync(id);
             int userId = JwtTokenDecoder.GetUserIdFromToken(token);
-            if (quote == null || quote.user_id != userId)
+            if (quote == null)
             {
                 return NotFound();
+            }
+            if (quote.user_id != userId)
+            {
+                return BadRequest("You can only modify your quotes.");
             }
 
             quote.quote_content = quoteDto.Quote;
@@ -233,11 +238,11 @@ namespace QuoteApi.Controllers
             quote.who_said = quoteDto.SaidBy;
             quote.when_was_said = DateOnly.Parse(quoteDto.When);
             quote.user_id = userId;
-            quote.creation_date = DateTime.Now;
+            quote.creation_date = DateTime.UtcNow;
             _context.Quotes.Add(quote);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetQuote), new { creator_id = quote.user_id, quote.id }, quote);
+            return CreatedAtAction(nameof(GetQuote), new { userId = quote.user_id, quote.id }, quote);
         }
 
         // DELETE: quotes/21
@@ -257,9 +262,13 @@ namespace QuoteApi.Controllers
             var quote = await _context.Quotes.FindAsync(id);
             int userId = JwtTokenDecoder.GetUserIdFromToken(token);
 
-            if (quote == null || quote.user_id != userId)
+            if (quote == null)
             {
                 return NotFound();
+            }
+            if (quote.user_id != userId)
+            {
+                return BadRequest("You can only delete your quotes.");
             }
 
             _context.Quotes.Remove(quote);
