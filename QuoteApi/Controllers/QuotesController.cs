@@ -106,15 +106,15 @@ namespace QuoteApi.Controllers
         // GET: quotes/search
         [HttpGet("search")]
         public async Task<ActionResult<List<QuoteDTO>>> SearchQuotes(
-            [FromQuery] string content, [FromQuery] string who_said, [FromQuery] string start_said_date, [FromQuery] string end_said_date,
-            [FromQuery] int? user_id, [FromQuery] string start_creation_date, [FromQuery] string end_creation_date)
+            [FromQuery] string? content, [FromQuery] string? who_said, [FromQuery] string? start_said_date, [FromQuery] string? end_said_date,
+            [FromQuery] string? username, [FromQuery] string? displayed_name, [FromQuery] string? start_creation_date, [FromQuery] string? end_creation_date)
         {
             if (_context.Quotes == null)
             {
                 return NotFound();
             }
 
-            var quotes = await _context.Quotes.ToListAsync();
+            var quotes = await _context.Quotes.Include(q => q.User).ToListAsync();
             if (quotes == null)
             {
                 return NotFound();
@@ -127,31 +127,34 @@ namespace QuoteApi.Controllers
             {
                 quotes = quotes.Where(q => q.who_said.ToLower().Contains(who_said.ToLower())).ToList();
             }
-            DateOnly startSaidDate = DateOnly.Parse(start_said_date);
             if (!string.IsNullOrWhiteSpace(start_said_date))
             {
+                DateOnly startSaidDate = DateOnly.Parse(start_said_date);
                 quotes = quotes.Where(q => q.when_was_said >= startSaidDate).ToList();
             }
-            DateOnly endSaidDate = DateOnly.Parse(end_said_date);
             if (!string.IsNullOrWhiteSpace(end_said_date))
             {
+                DateOnly endSaidDate = DateOnly.Parse(end_said_date);
                 quotes = quotes.Where(q => q.when_was_said <= endSaidDate).ToList();
             }
-            if (user_id != null)
+            if (!string.IsNullOrWhiteSpace(username))
             {
-                quotes = quotes.Where(q => q.user_id == user_id).ToList();
+                quotes = quotes.Where(q => q.User.username.ToLower().Contains(username.ToLower())).ToList();
             }
-            DateTime startCreationDate = DateTime.Parse(start_creation_date);
-            if (!string.IsNullOrWhiteSpace(content))
+            if (!string.IsNullOrWhiteSpace(displayed_name))
             {
+                quotes = quotes.Where(q => q.User.displayed_name.ToLower().Contains(displayed_name.ToLower())).ToList();
+            }
+            if (!string.IsNullOrWhiteSpace(start_creation_date))
+            {
+                DateTime startCreationDate = DateTime.Parse(start_creation_date);
                 quotes = quotes.Where(q => q.creation_date >= startCreationDate).ToList();
             }
-            DateTime endCreationDate = DateTime.Parse(end_creation_date);
-            if (!string.IsNullOrWhiteSpace(content))
+            if (!string.IsNullOrWhiteSpace(end_creation_date))
             {
+                DateTime endCreationDate = DateTime.Parse(end_creation_date);
                 quotes = quotes.Where(q => q.creation_date <= endCreationDate).ToList();
             }
-
             List<QuoteDTO> quotesDto = new List<QuoteDTO>();
             foreach (var quote in quotes)
             {
@@ -242,7 +245,29 @@ namespace QuoteApi.Controllers
             _context.Quotes.Add(quote);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetQuote), new { userId = quote.user_id, quote.id }, quote);
+            var savedQuote = await _context.Quotes
+                .Include(q => q.User)
+                .FirstOrDefaultAsync(q => q.id == quote.id);
+            if (savedQuote == null)
+            {
+                return Problem("Failed to retrieve saved quote.");
+            }
+            QuoteDTO savedQuoteDto = new QuoteDTO
+            {
+                Id = savedQuote.id,
+                Quote = savedQuote.quote_content,
+                SaidBy = savedQuote.who_said,
+                When = savedQuote.when_was_said.ToString("yyyy-MM-dd"),
+                User = new UserInfoDTO
+                {
+                    Id = savedQuote.User.id,
+                    Username = savedQuote.User.username,
+                    DisplayedName = savedQuote.User.displayed_name
+                },
+                CreatedOn = savedQuote.creation_date.ToString("yyyy-MM-dd HH:mm")
+            };
+
+            return CreatedAtAction(nameof(GetQuote), new { userId = savedQuote.user_id, savedQuote.id }, savedQuoteDto);
         }
 
         // DELETE: quotes/21
