@@ -1,7 +1,5 @@
 ﻿@page "/quotes/{user}/edit/{id:int}"
 
-@using System.Net.Http
-@using System.Net.Http.Json
 @inject HttpClient Http
 @inject NavigationManager NavigationManager
 
@@ -15,7 +13,7 @@
 {
     <EditForm Model="@editedQuote" OnValidSubmit="@HandleValidSubmit">
         <DataAnnotationsValidator />
-        <ValidationSummary />
+        @* <ValidationSummary /> *@
 
         <p>
             <label>

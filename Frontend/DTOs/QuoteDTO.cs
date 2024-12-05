@@ -1,4 +1,4 @@
-﻿namespace QuoteApi.DTOs;
+﻿namespace Frontend.DTOs;
 public class QuoteDTO
 {
     public int Id { get; set; }

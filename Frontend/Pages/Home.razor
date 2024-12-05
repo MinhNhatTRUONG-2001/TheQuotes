@@ -1,7 +1,5 @@
 ﻿@page "/"
 
-@using System.Net.Http
-@using System.Net.Http.Json
 @inject HttpClient Http
 
 <PageTitle>Index</PageTitle>
@@ -13,6 +11,17 @@
     {
         <QuoteItem Quote=quote />
     }
+}
+else {
+    <Card Shadow="Shadow.Default" Margin="Margin.Is3.OnY">
+        <CardBody>
+            <Skeleton  Animation="SkeletonAnimation.Wave">
+                <SkeletonItem ColumnSize="ColumnSize.Is7" />
+                <SkeletonItem ColumnSize="ColumnSize.Is4" />
+                <SkeletonItem ColumnSize="ColumnSize.Is10" />
+            </Skeleton>
+        </CardBody>
+    </Card>
 }
 
 @code {

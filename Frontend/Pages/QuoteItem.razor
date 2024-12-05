@@ -1,12 +1,29 @@
-﻿<div class="quote">
-    <p><i>"@Quote.Quote"</i></p>
-    <p>@Quote.SaidBy (@Quote.When)</p>
+﻿<Card Shadow="Shadow.Default" Margin="Margin.Is3.OnY">
+    <CardHeader Background="Background.Transparent">
+        <b>@Quote.User.DisplayedName</b> (@Quote.User.Username) &bull; @Quote.CreatedOn
+    </CardHeader>
+    <CardBody>
+        <CardText TextAlignment="TextAlignment.Center" Margin="Margin.Is3.OnY">
+            <i>"@Quote.Quote"</i>
+        </CardText>
+        <CardText TextAlignment="TextAlignment.Center">
+            @Quote.SaidBy
+        </CardText>
+        @if (Quote.When != null)
+        {
+            <CardText TextAlignment="TextAlignment.Center">
+                @Quote.When
+            </CardText>
+        }
+    </CardBody>
     @if (EditLink != null && DeleteLink != null)
     {
-        <p><NavLink href=@EditLink>Edit</NavLink> or <NavLink href=@DeleteLink>Delete</NavLink> this quote</p>
+        <CardFooter Background="Background.Transparent" TextAlignment="TextAlignment.Center" Margin="Margin.Is3.FromTop">
+            <Button Color="Color.Primary" Type="ButtonType.Link" To="#">Edit</Button>
+            <Button Color="Color.Danger" Type="ButtonType.Link" To="#">Delete</Button>
+        </CardFooter>
     }
-
-</div>
+</Card>
 
 @code {
     [Parameter]
