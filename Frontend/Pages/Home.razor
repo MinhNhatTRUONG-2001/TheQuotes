@@ -1,10 +1,35 @@
 ﻿@page "/"
 
 @inject HttpClient Http
+@inject IJSRuntime JS
 
-<PageTitle>Index</PageTitle>
+<PageTitle>The Quotes</PageTitle>
 
-<h1>Top 5 latest created quotes</h1>
+@if (!string.IsNullOrEmpty(token))
+{
+    <div class="pb-4">
+        <a href="/">
+            <Button Color="Color.Primary">My Quotes</Button>
+        </a>
+        <a href="/">
+            <Button Color="Color.Primary">Add Quote</Button>
+        </a>
+        <Button Color="Color.Danger" Clicked="@HandleLogout">Logout</Button>
+    </div>
+}
+else
+{
+    <div class="pb-4">
+        <a href="/login">
+            <Button Color="Color.Primary">Login</Button>
+        </a>
+        <a href="/register">
+            <Button Color="Color.Primary">Register</Button>
+        </a>
+    </div>
+}
+
+<h1>Latest created quotes</h1>
 @if (top5Quotes != null)
 {
     @foreach (var quote in top5Quotes)
@@ -12,10 +37,11 @@
         <QuoteItem Quote=quote />
     }
 }
-else {
+else
+{
     <Card Shadow="Shadow.Default" Margin="Margin.Is3.OnY">
         <CardBody>
-            <Skeleton  Animation="SkeletonAnimation.Wave">
+            <Skeleton Animation="SkeletonAnimation.Wave">
                 <SkeletonItem ColumnSize="ColumnSize.Is7" />
                 <SkeletonItem ColumnSize="ColumnSize.Is4" />
                 <SkeletonItem ColumnSize="ColumnSize.Is10" />
@@ -26,7 +52,16 @@ else {
 
 @code {
     private List<QuoteDTO>? top5Quotes;
-
-    protected override async Task OnInitializedAsync() => 
+    private string? token;
+    protected override async Task OnInitializedAsync()
+    {
+        token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
         top5Quotes = await Http.GetFromJsonAsync<List<QuoteDTO>>("quotes");
+    }
+
+    private async Task HandleLogout()
+    {
+        token = null;
+        await JS.InvokeVoidAsync("cookieManager.deleteCookie", "token");
+    }
 }

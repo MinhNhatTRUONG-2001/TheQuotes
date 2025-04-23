@@ -1,28 +1,72 @@
 ﻿@inject NavigationManager NavigationManager
+@using Blazorise.Snackbar
+@inject HttpClient Http
+@inject IJSRuntime JS
 
 @page "/login"
 
-<h2>Login</h2>
+<div class="pb-4">
+    <a href="/">
+        <Button Color="Color.Primary">
+            <Icon Name="IconName.Home" /> Homepage
+        </Button>
+    </a>
+</div>
 
-<p>Write your username here:</p>
-<input type="text" @bind="User" />
-<button @onclick="HandleValidSubmit">Login</button>
-<br>
-<p class="alertmessage">@ErrorMessage</p>
+@if (!string.IsNullOrEmpty(token))
+{
+    <h2>You have already logged in!</h2>
+}
+else
+{
+    <h2>Login</h2>
+    <TextEdit Placeholder="Username" @bind-Text="@User.Username" />
+    <br>
+    <TextEdit Placeholder="Password" Role="showPassword? TextRole.Text: TextRole.Password" @bind-Text="@User.Password" />
+    <br>
+    <Check TValue="bool" @bind-Checked="@showPassword">Show Password</Check>
+    <br>
+    <Button Color="Color.Primary" Clicked="@HandleValidSubmit" Disabled="@DisabledLoginButton">Login</Button>
+    <br>
+    <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
+}
 
 @code {
-    private string? User { get; set; }
+    private UserDTO User = new UserDTO();
+    private SnackbarStack snackbarStack;
+    private bool showPassword = false;
     private string ErrorMessage = "";
-
-    protected void HandleValidSubmit()
+    private bool DisabledLoginButton = false;
+    private string? token;
+    protected override async Task OnInitializedAsync()
     {
-        if (!string.IsNullOrEmpty(User))
+        token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
+    }
+    protected async Task HandleValidSubmit()
+    {
+        DisabledLoginButton = true;
+        try
         {
-            NavigationManager.NavigateTo("/quotes/" + User);
+            var response = await Http.PostAsJsonAsync("/users/login", User);
+            if (response.IsSuccessStatusCode)
+            {
+                var token = response.Content.ReadAsStringAsync().Result;
+                await JS.InvokeVoidAsync("cookieManager.setCookie", "token", token, 1);
+                NavigationManager.NavigateTo("/");
+            }
+            else
+            {
+                ErrorMessage = response.Content.ReadAsStringAsync().Result;
+                await snackbarStack.PushAsync(ErrorMessage, SnackbarColor.Danger);
+            }
         }
-        else
+        catch (Exception ex)
         {
-            ErrorMessage = "Please write something!";
+            await snackbarStack.PushAsync(ex.Message, SnackbarColor.Danger);
+        }
+        finally
+        {
+            DisabledLoginButton = false;
         }
     }
 }

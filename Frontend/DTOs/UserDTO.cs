@@ -6,6 +6,7 @@
         public string? Username { get; set; }
         public string? DisplayedName { get; set; }
         public string? Password { get; set; }
+        public string? RetypePassword { get; set; } // for changing password and registering only
         public string? CurrentPassword { get; set; } // for changing password only
     }
 }

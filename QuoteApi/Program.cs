@@ -4,6 +4,7 @@ using Npgsql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using DotNetEnv;
 
 namespace QuoteApi;
 
@@ -11,6 +12,7 @@ public class Program
 {
     public static void Main(string[] args)
     {
+        Env.Load(); // Load environment variables from .env file
 
         var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +35,8 @@ public class Program
         // Add services to the container.
         var connectionStringBuilder = new NpgsqlConnectionStringBuilder(
             builder.Configuration.GetConnectionString("QuoteDb"));
+        connectionStringBuilder.Database = Environment.GetEnvironmentVariable("DATABASE_NAME");
+        connectionStringBuilder.Username = Environment.GetEnvironmentVariable("DATABASE_USERNAME");
         connectionStringBuilder.Password = Environment.GetEnvironmentVariable("DATABASE_PASSWORD");
         var connectionString = connectionStringBuilder.ConnectionString;
         builder.Services.AddDbContext<QuoteContext>(options =>

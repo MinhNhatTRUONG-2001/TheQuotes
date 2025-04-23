@@ -1,0 +1,97 @@
+@page "/register"
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+@using System.Net.Http.Json
+@inject IJSRuntime JS
+
+<div class="pb-4">
+    <a href="/">
+        <Button Color="Color.Primary">
+            <Icon Name="IconName.Home" /> Homepage
+        </Button>
+    </a>
+</div>
+
+@if (!string.IsNullOrEmpty(token))
+{
+    <h2>You need to logout before registering!</h2>
+}
+else
+{
+    <h3>Register</h3>
+
+    <EditForm Model="User" OnValidSubmit="HandleRegister">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <InputText class="form-control" placeholder="Username" @bind-Value="User.Username" />
+        </div>
+
+        <div class="mb-3">
+            <InputText class="form-control" placeholder="Displayed Name" @bind-Value="User.DisplayedName" />
+        </div>
+
+        <div class="mb-3">
+            <InputText type="@(showPassword ? "text" : "password")" class="form-control" placeholder="Password"
+                @bind-Value="User.Password" />
+        </div>
+
+        <div class="mb-3">
+            <InputText type="@(showPassword ? "text" : "password")" class="form-control" placeholder="Retype Password"
+                @bind-Value="User.RetypePassword" />
+        </div>
+
+        <Check TValue="bool" @bind-Checked="@showPassword">Show Password</Check>
+
+        <button type="submit" class="btn btn-primary" disabled=@DisabledRegisterButton>Register</button>
+    </EditForm>
+    <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
+}
+
+@code {
+    private UserDTO User = new UserDTO();
+    private SnackbarStack snackbarStack;
+    private bool showPassword = false;
+    private string? ErrorMessage;
+    private bool DisabledRegisterButton = false;
+    private string? token;
+    protected override async Task OnInitializedAsync()
+    {
+        token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
+    }
+
+    private async Task HandleRegister()
+    {
+        DisabledRegisterButton = true;
+        try
+        {
+            if (User.Password != User.RetypePassword)
+            {
+                await snackbarStack.PushAsync("Passwords do not match!", SnackbarColor.Danger);
+            }
+            else
+            {
+                var response = await Http.PostAsJsonAsync("users/register", User);
+                if (response.IsSuccessStatusCode)
+                {
+                    var token = response.Content.ReadAsStringAsync().Result;
+                    await JS.InvokeVoidAsync("cookieManager.setCookie", "token", token, 1);
+                    NavigationManager.NavigateTo("/");
+                }
+                else
+                {
+                    ErrorMessage = response.Content.ReadAsStringAsync().Result;
+                    await snackbarStack.PushAsync(ErrorMessage, SnackbarColor.Danger);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await snackbarStack.PushAsync(ex.Message, SnackbarColor.Danger);
+        }
+        finally
+        {
+            DisabledRegisterButton = false;
+        }
+    }
+}
