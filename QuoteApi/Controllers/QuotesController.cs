@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuoteApi.Controllers.Helpers;
 using QuoteApi.Data;
@@ -57,16 +56,18 @@ namespace QuoteApi.Controllers
             return top5QuotesDto;
         }
 
-        // GET: quotes/3
-        [HttpGet("{userId}")]
-        public async Task<ActionResult<List<QuoteDTO>>> GetQuotes(int userId)
+        // GET: quotes/user/3
+        [HttpGet("user/{userId}")]
+        public async Task<ActionResult<List<QuoteDTO>>> GetQuotesByUserId(int userId)
         {
             if (_context.Quotes == null)
             {
                 return NotFound();
             }
             var quotes = await _context.Quotes
+                        .Include(q => q.User)
                         .Where(q => q.user_id == userId)
+                        .OrderByDescending(q => q.creation_date)
                         .ToListAsync();
             if (quotes == null)
             {
@@ -95,15 +96,15 @@ namespace QuoteApi.Controllers
             return quotesDto;
         }
 
-        // GET: quotes/3/21
-        [HttpGet("{userId}/{id}")]
-        public async Task<ActionResult<QuoteDTO>> GetQuote(int userId, int id)
+        // GET: quotes/21
+        [HttpGet("{id}")]
+        public async Task<ActionResult<QuoteDTO>> GetQuote(int id)
         {
             if (_context.Quotes == null)
             {
                 return NotFound();
             }
-            var quote = await _context.Quotes.Include(q => q.User).FirstOrDefaultAsync(q => q.id == id && q.user_id == userId);
+            var quote = await _context.Quotes.Include(q => q.User).FirstOrDefaultAsync(q => q.id == id);
 
             if (quote == null)
             {
@@ -179,6 +180,7 @@ namespace QuoteApi.Controllers
                 DateTime endCreationDate = DateTime.Parse(end_creation_date);
                 quotes = quotes.Where(q => q.creation_date <= endCreationDate).ToList();
             }
+            quotes = quotes.OrderByDescending(q => q.creation_date).ToList();
             List<QuoteDTO> quotesDto = new List<QuoteDTO>();
             foreach (var quote in quotes)
             {
@@ -203,13 +205,16 @@ namespace QuoteApi.Controllers
 
         // PUT: quotes/21
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [Authorize]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutQuote(int id, QuoteDTO quoteDto, [FromHeader(Name = "Authorization")] string token = "")
         {
             if (_context.Quotes == null)
             {
                 return NotFound();
+            }
+            if (string.IsNullOrWhiteSpace(quoteDto.Quote) || string.IsNullOrWhiteSpace(quoteDto.SaidBy))
+            {
+                return BadRequest("Please fill in required field.");
             }
             if (token.Contains("Bearer "))
             {
@@ -220,7 +225,7 @@ namespace QuoteApi.Controllers
             int userId = JwtTokenDecoder.GetUserIdFromToken(token);
             if (quote == null)
             {
-                return NotFound();
+                return NotFound("Quote is not found.");
             }
             if (quote.user_id != userId)
             {
@@ -244,7 +249,7 @@ namespace QuoteApi.Controllers
             {
                 if (!QuoteExists(id))
                 {
-                    return NotFound();
+                    return NotFound("Quote is not found.");
                 }
                 else
                 {
@@ -257,7 +262,6 @@ namespace QuoteApi.Controllers
 
         // POST: quotes
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [Authorize]
         [HttpPost]
         public async Task<ActionResult<QuoteDTO>> PostQuote(QuoteDTO quoteDto, [FromHeader(Name = "Authorization")] string token = "")
         {
@@ -265,29 +269,38 @@ namespace QuoteApi.Controllers
             {
                 return NotFound();
             }
+            if (string.IsNullOrWhiteSpace(quoteDto.Quote) || string.IsNullOrWhiteSpace(quoteDto.SaidBy))
+            {
+                return BadRequest("Please fill in required field.");
+            }
             if (token.Contains("Bearer "))
             {
                 token = token.Split("Bearer ")[1];
             }
             int userId = JwtTokenDecoder.GetUserIdFromToken(token);
             Quote quote = new Quote();
-            quote.quote_content = quoteDto.Quote;
-            quote.who_said = quoteDto.SaidBy;
-            if (quoteDto.When != null)
-            {
-                quote.when_was_said = DateOnly.Parse(quoteDto.When);
+            try {
+                quote.quote_content = quoteDto.Quote;
+                quote.who_said = quoteDto.SaidBy;
+                if (quoteDto.When != null)
+                {
+                    quote.when_was_said = DateOnly.Parse(quoteDto.When);
+                }
+                quote.user_id = userId;
+                quote.creation_date = DateTime.UtcNow;
+                _context.Quotes.Add(quote);
+                await _context.SaveChangesAsync();
             }
-            quote.user_id = userId;
-            quote.creation_date = DateTime.UtcNow;
-            _context.Quotes.Add(quote);
-            await _context.SaveChangesAsync();
-
+            catch (Exception)
+            {
+                return BadRequest("Error while saving your quote");
+            }
             var savedQuote = await _context.Quotes
                 .Include(q => q.User)
                 .FirstOrDefaultAsync(q => q.id == quote.id);
             if (savedQuote == null)
             {
-                return Problem("Failed to retrieve saved quote.");
+                return BadRequest("Failed to retrieve saved quote.");
             }
             QuoteDTO savedQuoteDto = new QuoteDTO
             {
@@ -308,7 +321,6 @@ namespace QuoteApi.Controllers
         }
 
         // DELETE: quotes/21
-        [Authorize]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteQuote(int id, [FromHeader(Name = "Authorization")] string token = "")
         {
@@ -326,7 +338,7 @@ namespace QuoteApi.Controllers
 
             if (quote == null)
             {
-                return NotFound();
+                return NotFound("Quote is not found.");
             }
             if (quote.user_id != userId)
             {

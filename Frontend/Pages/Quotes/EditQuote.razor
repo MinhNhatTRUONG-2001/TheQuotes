@@ -1,43 +1,48 @@
-﻿@page "/quotes/{user}/edit/{id:int}"
+﻿@page "/my-quotes/edit/{id:int}"
 
 @inject HttpClient Http
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JS
 
-<h1>Edit Quote</h1>
-<h2>User: @User</h2>
+<PageTitle>Edit Quote</PageTitle>
 
-<NavLink href=@{"/quotes/" + @User}>Back to your quotes</NavLink>
-<br />
-
-@if (editedQuote != null)
+@if (loading)
 {
-    <EditForm Model="@editedQuote" OnValidSubmit="@HandleValidSubmit">
-        <DataAnnotationsValidator />
-        @* <ValidationSummary /> *@
-
-        <p>
-            <label>
-                The Quote:
-                <InputText @bind-Value="editedQuote.Quote" />
-            </label>
-        </p>
-        <p>
-            <label>
-                Who Said The Quote:
-                <InputText @bind-Value="editedQuote.SaidBy" />
-            </label>
-        </p>
-        <p>
-            <label>
-                When The Quote Was Said:
-                <InputDate @bind-Value="when" />
-            </label>
-        </p>
-
-        <button type="submit">Edit</button>
-    </EditForm>
+    <h2>Loading...</h2>
 }
-
+else
+{
+    @if (string.IsNullOrEmpty(token))
+    {
+        <h2>You need to login to delete your quotes!</h2>
+    }
+    else
+    {
+        <div class="mt-4 mb-2">
+            <Button Color="Color.Primary" Type="ButtonType.Link" To="/my-quotes">
+                <Icon Name="IconName.AngleLeft" /> My Quotes
+            </Button>
+            <h2>Edit Quote</h2>
+            @if (editedQuote != null)
+            {
+                <EditForm Model="@editedQuote" OnValidSubmit="@HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    Quote Content: *
+                    <InputText class="form-control" required @bind-Value="editedQuote.Quote" />
+                    <br>
+                    Who Said: *
+                    <InputText class="form-control" required @bind-Value="editedQuote.SaidBy" />
+                    <br>
+                    When It Was Said:
+                    <InputDate class="form-control" @bind-Value="when" />
+                    <br>
+                    <button type="submit" class="btn btn-primary" disabled=@DisabledEditButton>Update</button>
+                </EditForm>
+            }
+            <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
+        </div>
+    }
+}
 
 @code {
     [Parameter]
@@ -45,18 +50,36 @@
     [Parameter]
     public int? Id { get; set; }
     public QuoteDTO? editedQuote;
-    public DateTime when; // for type casting of the "When The Quote Was Said" field
+    public DateTime when; // for type casting of the "When It Was Said" field
+    private SnackbarStack snackbarStack;
+    private string? token;
+    private bool loading = true;
+    private bool DisabledEditButton = false;
 
     protected override async Task OnInitializedAsync()
     {
-        editedQuote = await Http.GetFromJsonAsync<QuoteDTO>("/quotes/" + User + "/" + Id);
+        token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
+        Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        editedQuote = await Http.GetFromJsonAsync<QuoteDTO>("/quotes/" + Id);
         when = DateTime.Parse(editedQuote.When);
+        loading = false;
     }
-
     protected async Task HandleValidSubmit()
     {
+        DisabledEditButton = true;
         editedQuote.When = when.ToString("yyyy-MM-dd");
-        await Http.PutAsJsonAsync("/quotes/" + User + "/" + Id, editedQuote);
-        NavigationManager.NavigateTo("/quotes/" + User);
+        var response = await Http.PutAsJsonAsync("/quotes/" + Id, editedQuote);
+        if (response.IsSuccessStatusCode)
+        {
+            await snackbarStack.PushAsync("Quote edited successfully!", SnackbarColor.Success);
+            await Task.Delay(1000);
+            NavigationManager.NavigateTo("/my-quotes");
+        }
+        else
+        {
+            string errorMessage = await response.Content.ReadAsStringAsync();
+            await snackbarStack.PushAsync(errorMessage, SnackbarColor.Danger);
+        }
+        DisabledEditButton = false;
     }
 }

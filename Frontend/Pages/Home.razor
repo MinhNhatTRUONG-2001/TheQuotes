@@ -5,58 +5,63 @@
 
 <PageTitle>The Quotes</PageTitle>
 
-@if (!string.IsNullOrEmpty(token))
+@if (loading)
 {
-    <div class="pb-4">
-        <a href="/">
-            <Button Color="Color.Primary">My Quotes</Button>
-        </a>
-        <a href="/">
-            <Button Color="Color.Primary">Add Quote</Button>
-        </a>
-        <Button Color="Color.Danger" Clicked="@HandleLogout">Logout</Button>
-    </div>
+    <h2>Loading...</h2>
 }
 else
 {
-    <div class="pb-4">
-        <a href="/login">
-            <Button Color="Color.Primary">Login</Button>
-        </a>
-        <a href="/register">
-            <Button Color="Color.Primary">Register</Button>
-        </a>
-    </div>
-}
-
-<h1>Latest created quotes</h1>
-@if (top5Quotes != null)
-{
-    @foreach (var quote in top5Quotes)
+    @if (!string.IsNullOrEmpty(token))
     {
-        <QuoteItem Quote=quote />
+        <div class="mt-4 mb-2">
+            <a href="/my-quotes">
+                <Button Color="Color.Primary">My Quotes</Button>
+            </a>
+            <Button Color="Color.Danger" Clicked="@HandleLogout">Logout</Button>
+        </div>
     }
-}
-else
-{
-    <Card Shadow="Shadow.Default" Margin="Margin.Is3.OnY">
-        <CardBody>
-            <Skeleton Animation="SkeletonAnimation.Wave">
-                <SkeletonItem ColumnSize="ColumnSize.Is7" />
-                <SkeletonItem ColumnSize="ColumnSize.Is4" />
-                <SkeletonItem ColumnSize="ColumnSize.Is10" />
-            </Skeleton>
-        </CardBody>
-    </Card>
+    else
+    {
+        <div class="mt-4 mb-2">
+            <a href="/login">
+                <Button Color="Color.Primary">Login</Button>
+            </a>
+            <a href="/register">
+                <Button Color="Color.Primary">Register</Button>
+            </a>
+        </div>
+    }
+    <h1>Latest created quotes</h1>
+    @if (top5Quotes != null)
+    {
+        @foreach (var quote in top5Quotes)
+        {
+            <QuoteItem Quote=quote />
+        }
+    }
+    else
+    {
+        <Card Shadow="Shadow.Default" Margin="Margin.Is3.OnY">
+            <CardBody>
+                <Skeleton Animation="SkeletonAnimation.Wave">
+                    <SkeletonItem ColumnSize="ColumnSize.Is7" />
+                    <SkeletonItem ColumnSize="ColumnSize.Is4" />
+                    <SkeletonItem ColumnSize="ColumnSize.Is10" />
+                </Skeleton>
+            </CardBody>
+        </Card>
+    }
 }
 
 @code {
     private List<QuoteDTO>? top5Quotes;
     private string? token;
+    private bool loading = true;
     protected override async Task OnInitializedAsync()
     {
         token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
         top5Quotes = await Http.GetFromJsonAsync<List<QuoteDTO>>("quotes");
+        loading = false;
     }
 
     private async Task HandleLogout()

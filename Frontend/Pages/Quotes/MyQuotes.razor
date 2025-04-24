@@ -1,0 +1,66 @@
+﻿@page "/my-quotes"
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<PageTitle>My Quotes</PageTitle>
+
+@if (loading)
+{
+    <h2>Loading...</h2>
+}
+else
+{
+    @if (string.IsNullOrEmpty(token))
+    {
+        <h2>You need to login to see your quotes!</h2>
+    }
+    else
+    {
+        <div class="mt-4 mb-2">
+            <a href="/my-quotes/add">
+                <Button Color="Color.Primary">
+                    <Icon Name="IconName.Add" /> Add Quote
+                </Button>
+            </a>
+
+            <h2>Quotes of @User?.DisplayedName</h2>
+
+            @if (userQuotes != null)
+            {
+                @foreach (var quote in userQuotes)
+                {
+                    EditLink = "/my-quotes/edit/" + quote.Id;
+                    DeleteLink = "/my-quotes/delete/" + quote.Id;
+                    <QuoteItem Quote=quote EditLink=@EditLink DeleteLink="@DeleteLink" />
+                }
+            }
+        </div>
+    }
+}
+
+@code {
+    private string? token;
+    private bool loading = true;
+    private List<QuoteDTO>? userQuotes;
+    private UserInfoDTO? User;
+    private string? EditLink;
+    private string? DeleteLink;
+
+    protected override async Task OnInitializedAsync()
+    {
+        token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
+        var request = new HttpRequestMessage(HttpMethod.Get, "users/info");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        var response = await Http.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            User = await response.Content.ReadFromJsonAsync<UserInfoDTO>();
+        }
+        if (User != null)
+        {
+            userQuotes = await Http.GetFromJsonAsync<List<QuoteDTO>>("quotes/user/" + User.Id);
+        }
+        loading = false;
+    }
+}

@@ -1,6 +1,5 @@
 ﻿using Isopoh.Cryptography.Argon2;
 using Isopoh.Cryptography.SecureArray;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -94,7 +93,6 @@ namespace QuoteApi.Controllers
         }
 
         // GET users/info
-        [Authorize]
         [HttpGet("info")]
         public async Task<ActionResult<UserInfoDTO>> GetUserInfo([FromHeader(Name = "Authorization")] string token = "")
         {
@@ -127,7 +125,6 @@ namespace QuoteApi.Controllers
         }
 
         // PUT users/change_info
-        [Authorize]
         [HttpPut("change_info")]
         public async Task<IActionResult> ChangeUserInfo(UserInfoDTO userDTO, [FromHeader(Name = "Authorization")] string token = "")
         {
@@ -167,7 +164,6 @@ namespace QuoteApi.Controllers
         }
 
         // PUT users/change_password
-        [Authorize]
         [HttpPut("change_password")]
         public async Task<IActionResult> ChangePassword(UserDTO userDTO, [FromHeader(Name = "Authorization")] string token = "")
         {
@@ -215,7 +211,6 @@ namespace QuoteApi.Controllers
         }
 
         // DELETE users
-        [Authorize]
         [HttpDelete]
         public async Task<IActionResult> DeleteAccount(UserDTO userDTO, [FromHeader(Name = "Authorization")] string token = "")
         {

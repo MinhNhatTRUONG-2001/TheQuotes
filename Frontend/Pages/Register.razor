@@ -4,13 +4,7 @@
 @using System.Net.Http.Json
 @inject IJSRuntime JS
 
-<div class="pb-4">
-    <a href="/">
-        <Button Color="Color.Primary">
-            <Icon Name="IconName.Home" /> Homepage
-        </Button>
-    </a>
-</div>
+<PageTitle>Register</PageTitle>
 
 @if (!string.IsNullOrEmpty(token))
 {
@@ -18,34 +12,26 @@
 }
 else
 {
-    <h3>Register</h3>
-
-    <EditForm Model="User" OnValidSubmit="HandleRegister">
-        <DataAnnotationsValidator />
-
-        <div class="mb-3">
+    <div class="mt-4 mb-2">
+        <h3>Register</h3>
+        <EditForm Model="User" OnValidSubmit="HandleRegister">
+            <DataAnnotationsValidator />
             <InputText class="form-control" placeholder="Username" @bind-Value="User.Username" />
-        </div>
-
-        <div class="mb-3">
+            <br>
             <InputText class="form-control" placeholder="Displayed Name" @bind-Value="User.DisplayedName" />
-        </div>
-
-        <div class="mb-3">
+            <br>
             <InputText type="@(showPassword ? "text" : "password")" class="form-control" placeholder="Password"
                 @bind-Value="User.Password" />
-        </div>
-
-        <div class="mb-3">
+            <br>
             <InputText type="@(showPassword ? "text" : "password")" class="form-control" placeholder="Retype Password"
                 @bind-Value="User.RetypePassword" />
-        </div>
-
-        <Check TValue="bool" @bind-Checked="@showPassword">Show Password</Check>
-
-        <button type="submit" class="btn btn-primary" disabled=@DisabledRegisterButton>Register</button>
-    </EditForm>
-    <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
+            <br>
+            <Check TValue="bool" @bind-Checked="@showPassword">Show Password</Check>
+            <br>
+            <button type="submit" class="btn btn-primary" disabled=@DisabledRegisterButton>Register</button>
+        </EditForm>
+        <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
+    </div>
 }
 
 @code {

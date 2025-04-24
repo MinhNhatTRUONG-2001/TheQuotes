@@ -19,8 +19,8 @@
     @if (EditLink != null && DeleteLink != null)
     {
         <CardFooter Background="Background.Transparent" TextAlignment="TextAlignment.Center" Margin="Margin.Is3.FromTop">
-            <Button Color="Color.Primary" Type="ButtonType.Link" To="#">Edit</Button>
-            <Button Color="Color.Danger" Type="ButtonType.Link" To="#">Delete</Button>
+            <Button Color="Color.Primary" Type="ButtonType.Link" To=@EditLink><Icon Name="IconName.Edit" /> Edit</Button>
+            <Button Color="Color.Danger" Type="ButtonType.Link" To=@DeleteLink><Icon Name="IconName.Delete" /> Delete</Button>
         </CardFooter>
     }
 </Card>

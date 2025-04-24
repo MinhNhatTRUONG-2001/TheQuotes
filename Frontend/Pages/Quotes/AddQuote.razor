@@ -1,50 +1,70 @@
-﻿@page "/quotes/{user}/add"
+﻿@page "/my-quotes/add"
 
 @inject HttpClient Http
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JS
 
-<h1>Add New Quote</h1>
-<h2>User: @User</h2>
+<PageTitle>Add Quote</PageTitle>
 
-<NavLink href=@{"/quotes/" + @User}>Back to your quotes</NavLink>
-<br />
+@if (string.IsNullOrEmpty(token))
+{
+    <h2>You need to login to add your quotes!</h2>
+}
+else
+{
+    <div class="mt-4 mb-2">
+        <Button Color="Color.Primary" Type="ButtonType.Link" To="/my-quotes">
+            <Icon Name="IconName.AngleLeft" /> My Quotes
+        </Button>
+        <h2>Add A New Quote</h2>
+        <EditForm Model="@newQuote" OnValidSubmit="@HandleValidSubmit">
+            <DataAnnotationsValidator />
+            Quote Content: *
+            <InputText class="form-control" required @bind-Value="newQuote.Quote" />
+            <br>
+            Who Said: *
+            <InputText class="form-control" required @bind-Value="newQuote.SaidBy" />
+            <br>
+            When It Was Said:
+            <InputDate class="form-control" @bind-Value="when" />
+            <br>
+            <button type="submit" class="btn btn-primary" disabled=@DisabledAddButton>Add</button>
+        </EditForm>
+        <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
+    </div>
+}
 
-<EditForm Model="@newQuote" OnValidSubmit="@HandleValidSubmit">
-    <DataAnnotationsValidator />
-    @* <ValidationSummary /> *@
-
-    <p>
-        <label>
-            The Quote:
-            <InputText @bind-Value="newQuote.Quote" />
-        </label>
-    </p>
-    <p>
-        <label>
-            Who Said The Quote:
-            <InputText @bind-Value="newQuote.SaidBy" />
-        </label>
-    </p>
-    <p>
-        <label>
-            When The Quote Was Said:
-            <InputDate @bind-Value="when" />
-        </label>
-    </p>
-
-    <button type="submit">Add</button>
-</EditForm>
 
 @code {
     [Parameter]
     public string? User { get; set; }
     public QuoteDTO newQuote = new QuoteDTO();
     public DateTime when = DateTime.Now;
+    private SnackbarStack snackbarStack;
+    private string? token;
+    private bool DisabledAddButton = false;
 
+    protected override async Task OnInitializedAsync()
+    {
+        token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
+        Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+    }
     protected async Task HandleValidSubmit()
     {
+        DisabledAddButton = true;
         newQuote.When = when.ToString("yyyy-MM-dd");
-        await Http.PostAsJsonAsync("/quotes/" + User, newQuote);
-        NavigationManager.NavigateTo("/quotes/" + User);
+        var response = await Http.PostAsJsonAsync("/quotes", newQuote);
+        if (response.IsSuccessStatusCode)
+        {
+            await snackbarStack.PushAsync("Quote added successfully!", SnackbarColor.Success);
+            await Task.Delay(1000);
+            NavigationManager.NavigateTo("/my-quotes");
+        }
+        else
+        {
+            string errorMessage = await response.Content.ReadAsStringAsync();
+            await snackbarStack.PushAsync(errorMessage, SnackbarColor.Danger);
+        }
+        DisabledAddButton = false;
     }
 }

@@ -5,13 +5,7 @@
 
 @page "/login"
 
-<div class="pb-4">
-    <a href="/">
-        <Button Color="Color.Primary">
-            <Icon Name="IconName.Home" /> Homepage
-        </Button>
-    </a>
-</div>
+<PageTitle>Login</PageTitle>
 
 @if (!string.IsNullOrEmpty(token))
 {
@@ -19,16 +13,18 @@
 }
 else
 {
-    <h2>Login</h2>
-    <TextEdit Placeholder="Username" @bind-Text="@User.Username" />
-    <br>
-    <TextEdit Placeholder="Password" Role="showPassword? TextRole.Text: TextRole.Password" @bind-Text="@User.Password" />
-    <br>
-    <Check TValue="bool" @bind-Checked="@showPassword">Show Password</Check>
-    <br>
-    <Button Color="Color.Primary" Clicked="@HandleValidSubmit" Disabled="@DisabledLoginButton">Login</Button>
-    <br>
-    <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
+    <div class="mt-4 mb-2">
+        <h2>Login</h2>
+        <TextEdit Placeholder="Username" @bind-Text="@User.Username" />
+        <br>
+        <TextEdit Placeholder="Password" Role="showPassword? TextRole.Text: TextRole.Password" @bind-Text="@User.Password" />
+        <br>
+        <Check TValue="bool" @bind-Checked="@showPassword">Show Password</Check>
+        <br>
+        <Button Color="Color.Primary" Clicked="@HandleValidSubmit" Disabled="@DisabledLoginButton">Login</Button>
+        <br>
+        <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
+    </div>
 }
 
 @code {

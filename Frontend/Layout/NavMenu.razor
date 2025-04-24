@@ -1,4 +1,4 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿<div class="top-row ps-2 navbar navbar-dark bg-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">THE QUOTES</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -7,11 +7,11 @@
     </div>
 </div>
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+<div class="@NavMenuCssClass nav-scrollable bg-dark" @onclick="ToggleNavMenu">
     <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+        <div class="nav-item px-4 py-2 text-white">
+            <NavLink class="nav-link" href="/profile" Match="NavLinkMatch.All">
+                <Icon Name="IconName.User" /> Profile
             </NavLink>
         </div>
     </nav>
