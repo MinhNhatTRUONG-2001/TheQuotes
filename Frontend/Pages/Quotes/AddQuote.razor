@@ -26,7 +26,16 @@ else
             <InputText class="form-control" required @bind-Value="newQuote.SaidBy" />
             <br>
             When It Was Said:
-            <InputDate class="form-control" @bind-Value="when" />
+            <Addons>
+                <Addon AddonType="AddonType.Body">
+                    <DatePicker @ref="@datePicker" TValue="DateOnly?" @bind-Date="@when" />
+                </Addon>
+                <Addon AddonType="AddonType.End">
+                    <Button Color="Color.Danger" Clicked="@(() => when = null)">
+                        <Icon Name="IconName.Delete" />
+                    </Button>
+                </Addon>
+            </Addons>
             <br>
             <button type="submit" class="btn btn-primary" disabled=@DisabledAddButton>Add</button>
         </EditForm>
@@ -39,10 +48,11 @@ else
     [Parameter]
     public string? User { get; set; }
     public QuoteDTO newQuote = new QuoteDTO();
-    public DateTime when = DateTime.Now;
+    public DateOnly? when = DateOnly.FromDateTime(DateTime.Now);
     private SnackbarStack snackbarStack;
     private string? token;
     private bool DisabledAddButton = false;
+    DatePicker<DateOnly?> datePicker;
 
     protected override async Task OnInitializedAsync()
     {
@@ -52,7 +62,7 @@ else
     protected async Task HandleValidSubmit()
     {
         DisabledAddButton = true;
-        newQuote.When = when.ToString("yyyy-MM-dd");
+        newQuote.When = when?.ToString("yyyy-MM-dd");
         var response = await Http.PostAsJsonAsync("/quotes", newQuote);
         if (response.IsSuccessStatusCode)
         {

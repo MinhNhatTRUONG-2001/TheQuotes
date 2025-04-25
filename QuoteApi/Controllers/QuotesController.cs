@@ -238,6 +238,9 @@ namespace QuoteApi.Controllers
             {
                 quote.when_was_said = DateOnly.Parse(quoteDto.When);
             }
+            else {
+                quote.when_was_said = null;
+            }
 
             _context.Entry(quote).State = EntityState.Modified;
 
