@@ -17,27 +17,45 @@ else
             <Icon Name="IconName.AngleLeft" /> My Quotes
         </Button>
         <h2>Add A New Quote</h2>
-        <EditForm Model="@newQuote" OnValidSubmit="@HandleValidSubmit">
+        <EditForm Model="@newQuote" OnValidSubmit="@HandleAddQuote">
             <DataAnnotationsValidator />
-            Quote Content: *
-            <InputText class="form-control" required @bind-Value="newQuote.Quote" />
-            <br>
-            Who Said: *
-            <InputText class="form-control" required @bind-Value="newQuote.SaidBy" />
-            <br>
-            When It Was Said:
-            <Addons>
-                <Addon AddonType="AddonType.Body">
-                    <DatePicker @ref="@datePicker" TValue="DateOnly?" @bind-Date="@when" />
-                </Addon>
-                <Addon AddonType="AddonType.End">
-                    <Button Color="Color.Danger" Clicked="@(() => when = null)">
-                        <Icon Name="IconName.Delete" />
-                    </Button>
-                </Addon>
-            </Addons>
-            <br>
-            <button type="submit" class="btn btn-primary" disabled=@DisabledAddButton>Add</button>
+            <div class="form-floating mb-3">
+                <InputText id="floatingQuoteContent" class="form-control" placeholder="Quote Content" required
+                    @bind-Value="newQuote.Quote" />
+                <label for="floatingQuoteContent">Quote Content *</label>
+            </div>
+            <div class="form-floating mb-3">
+                <InputText id="floatingWhoSaid" class="form-control" placeholder="Who Said" required
+                    @bind-Value="newQuote.SaidBy" />
+                <label for="floatingWhoSaid">Who Said *</label>
+            </div>
+            <div class="mb-3">When It Was Said:
+                <Addons>
+                    <Addon AddonType="AddonType.Body">
+                        <DatePicker @ref="@datePicker" TValue="DateOnly ?" @bind-Date="@when" />
+                    </Addon>
+                    <Addon AddonType="AddonType.End">
+                        <Button Color="Color.Danger" Clicked="@(() => when = null)">
+                            <Icon Name="IconName.Delete" />
+                        </Button>
+                    </Addon>
+                </Addons>
+            </div>
+            <div class="form-floating mb-3">
+                <InputText id="floatingSource" class="form-control" type="url" placeholder="Source (URL)"
+                    @bind-Value="newQuote.Source" />
+                <label for="floatingSource">Source (URL)</label>
+            </div>
+            <button type="submit" class="btn btn-primary" disabled=@DisabledAddButton>
+                @if (DisabledAddButton)
+                {
+                    <Loading />
+                }
+                else
+                {
+                    <span>Add</span>
+                }
+            </button>
         </EditForm>
         <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
     </div>
@@ -59,7 +77,7 @@ else
         token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
         Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
     }
-    protected async Task HandleValidSubmit()
+    protected async Task HandleAddQuote()
     {
         DisabledAddButton = true;
         newQuote.When = when?.ToString("yyyy-MM-dd");

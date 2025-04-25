@@ -27,7 +27,7 @@ namespace QuoteApi.Controllers
             }
             var top5Quotes = await _context.Quotes
                             .Include(q => q.User)
-                            .OrderByDescending(q => q.creation_date)
+                            .OrderByDescending(q => q.created_at)
                             .Take(5)
                             .ToListAsync();
             if (top5Quotes == null)
@@ -43,13 +43,14 @@ namespace QuoteApi.Controllers
                     Quote = quote.quote_content,
                     SaidBy = quote.who_said,
                     When = quote.when_was_said?.ToString("yyyy-MM-dd"),
+                    Source = quote.source,
                     User = new UserInfoDTO
                     {
                         Id = quote.User.id,
                         Username = quote.User.username,
                         DisplayedName = quote.User.displayed_name
                     },
-                    CreatedOn = quote.creation_date.ToString("yyyy-MM-dd HH:mm")
+                    CreatedAt = quote.created_at.ToString("yyyy-MM-dd HH:mm")
                 };
                 top5QuotesDto.Add(quoteDto);
             }
@@ -67,7 +68,7 @@ namespace QuoteApi.Controllers
             var quotes = await _context.Quotes
                         .Include(q => q.User)
                         .Where(q => q.user_id == userId)
-                        .OrderByDescending(q => q.creation_date)
+                        .OrderByDescending(q => q.created_at)
                         .ToListAsync();
             if (quotes == null)
             {
@@ -83,13 +84,14 @@ namespace QuoteApi.Controllers
                     Quote = quote.quote_content,
                     SaidBy = quote.who_said,
                     When = quote.when_was_said?.ToString("yyyy-MM-dd"),
+                    Source = quote.source,
                     User = new UserInfoDTO
                     {
                         Id = quote.User.id,
                         Username = quote.User.username,
                         DisplayedName = quote.User.displayed_name
                     },
-                    CreatedOn = quote.creation_date.ToString("yyyy-MM-dd HH:mm")
+                    CreatedAt = quote.created_at.ToString("yyyy-MM-dd HH:mm")
                 };
                 quotesDto.Add(quoteDto);
             }
@@ -123,7 +125,7 @@ namespace QuoteApi.Controllers
                     Username = quote.User.username,
                     DisplayedName = quote.User.displayed_name
                 },
-                CreatedOn = quote.creation_date.ToString("yyyy-MM-dd HH:mm")
+                CreatedAt = quote.created_at.ToString("yyyy-MM-dd HH:mm")
             };
             return quoteDto;
         }
@@ -173,14 +175,14 @@ namespace QuoteApi.Controllers
             if (!string.IsNullOrWhiteSpace(start_creation_date))
             {
                 DateTime startCreationDate = DateTime.Parse(start_creation_date);
-                quotes = quotes.Where(q => q.creation_date >= startCreationDate).ToList();
+                quotes = quotes.Where(q => q.created_at >= startCreationDate).ToList();
             }
             if (!string.IsNullOrWhiteSpace(end_creation_date))
             {
                 DateTime endCreationDate = DateTime.Parse(end_creation_date);
-                quotes = quotes.Where(q => q.creation_date <= endCreationDate).ToList();
+                quotes = quotes.Where(q => q.created_at <= endCreationDate).ToList();
             }
-            quotes = quotes.OrderByDescending(q => q.creation_date).ToList();
+            quotes = quotes.OrderByDescending(q => q.created_at).ToList();
             List<QuoteDTO> quotesDto = new List<QuoteDTO>();
             foreach (var quote in quotes)
             {
@@ -190,13 +192,14 @@ namespace QuoteApi.Controllers
                     Quote = quote.quote_content,
                     SaidBy = quote.who_said,
                     When = quote.when_was_said?.ToString("yyyy-MM-dd"),
+                    Source = quote.source,
                     User = new UserInfoDTO
                     {
                         Id = quote.User.id,
                         Username = quote.User.username,
                         DisplayedName = quote.User.displayed_name
                     },
-                    CreatedOn = quote.creation_date.ToString("yyyy-MM-dd HH:mm")
+                    CreatedAt = quote.created_at.ToString("yyyy-MM-dd HH:mm")
                 };
                 quotesDto.Add(quoteDto);
             }
@@ -215,6 +218,14 @@ namespace QuoteApi.Controllers
             if (string.IsNullOrWhiteSpace(quoteDto.Quote) || string.IsNullOrWhiteSpace(quoteDto.SaidBy))
             {
                 return BadRequest("Please fill in required field.");
+            }
+            if (quoteDto.Quote.Trim().Length > 500)
+            {
+                return BadRequest("Invalid 'Quote Content'.");
+            }
+            if (quoteDto.SaidBy.Trim().Length > 50)
+            {
+                return BadRequest("Invalid 'Who Said The Quote'.");
             }
             if (token.Contains("Bearer "))
             {
@@ -241,6 +252,8 @@ namespace QuoteApi.Controllers
             else {
                 quote.when_was_said = null;
             }
+            quote.source = quoteDto.Source;
+            quote.last_updated = DateTime.UtcNow;
 
             _context.Entry(quote).State = EntityState.Modified;
 
@@ -276,6 +289,14 @@ namespace QuoteApi.Controllers
             {
                 return BadRequest("Please fill in required field.");
             }
+            if (quoteDto.Quote.Trim().Length > 500)
+            {
+                return BadRequest("Invalid 'Quote Content'.");
+            }
+            if (quoteDto.SaidBy.Trim().Length > 50)
+            {
+                return BadRequest("Invalid 'Who Said The Quote'.");
+            }
             if (token.Contains("Bearer "))
             {
                 token = token.Split("Bearer ")[1];
@@ -289,8 +310,12 @@ namespace QuoteApi.Controllers
                 {
                     quote.when_was_said = DateOnly.Parse(quoteDto.When);
                 }
+                if (string.IsNullOrWhiteSpace(quoteDto.Source))
+                {
+                    quote.source = quoteDto.Source;
+                }
                 quote.user_id = userId;
-                quote.creation_date = DateTime.UtcNow;
+                quote.created_at = DateTime.UtcNow;
                 _context.Quotes.Add(quote);
                 await _context.SaveChangesAsync();
             }
@@ -317,7 +342,7 @@ namespace QuoteApi.Controllers
                     Username = savedQuote.User.username,
                     DisplayedName = savedQuote.User.displayed_name
                 },
-                CreatedOn = savedQuote.creation_date.ToString("yyyy-MM-dd HH:mm")
+                CreatedAt = savedQuote.created_at.ToString("yyyy-MM-dd HH:mm")
             };
 
             return CreatedAtAction(nameof(GetQuote), new { userId = savedQuote.user_id, savedQuote.id }, savedQuoteDto);

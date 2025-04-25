@@ -16,19 +16,40 @@ else
         <h3>Register</h3>
         <EditForm Model="User" OnValidSubmit="HandleRegister">
             <DataAnnotationsValidator />
-            <InputText class="form-control" placeholder="Username" @bind-Value="User.Username" />
-            <br>
-            <InputText class="form-control" placeholder="Displayed Name" @bind-Value="User.DisplayedName" />
-            <br>
-            <InputText type="@(showPassword ? "text" : "password")" class="form-control" placeholder="Password"
-                @bind-Value="User.Password" />
-            <br>
-            <InputText type="@(showPassword ? "text" : "password")" class="form-control" placeholder="Retype Password"
-                @bind-Value="User.RetypePassword" />
-            <br>
+            <div class="form-floating mb-3">
+                <InputText id="floatingUsername" class="form-control" placeholder="Username" required @bind-Value="User.Username" />
+                <label for="floatingUsername">Username</label>
+            </div>
+            <div class="form-floating mb-3">
+                <InputText id="floatingEmail" class="form-control" type="email" placeholder="Email" required @bind-Value="User.Email" />
+                <label for="floatingEmail">Email</label>
+            </div>
+            <div class="form-floating mb-3">
+                <InputText id="floatingDisplayedName" class="form-control" placeholder="Displayed Name" required @bind-Value="User.DisplayedName" />
+                <label for="floatingDisplayedName">Displayed Name</label>
+            </div>
+            <div class="form-floating mb-3">
+                <InputText id="floatingPassword" type="@(showPassword ? "text" : "password")" class="form-control"
+                    placeholder="Password" required @bind-Value="User.Password" />
+                <label for="floatingPassword">Password</label>
+            </div>
+            <div class="form-floating mb-3">
+                <InputText id="floatingRetypePassword" type="@(showPassword ? "text" : "password")" class="form-control"
+                    placeholder="Retype Password" required @bind-Value="User.RetypePassword" />
+                <label for="floatingRetypePassword">Retype Password</label>
+            </div>
             <Check TValue="bool" @bind-Checked="@showPassword">Show Password</Check>
             <br>
-            <button type="submit" class="btn btn-primary" disabled=@DisabledRegisterButton>Register</button>
+            <button type="submit" class="btn btn-primary" disabled=@DisabledRegisterButton>
+                @if (DisabledRegisterButton)
+                {
+                    <Loading />
+                }
+                else
+                {
+                    <span>Register</span>
+                }
+            </button>
         </EditForm>
         <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
     </div>

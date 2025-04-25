@@ -15,14 +15,32 @@ else
 {
     <div class="mt-4 mb-2">
         <h2>Login</h2>
-        <TextEdit Placeholder="Username" @bind-Text="@User.Username" />
-        <br>
-        <TextEdit Placeholder="Password" Role="showPassword? TextRole.Text: TextRole.Password" @bind-Text="@User.Password" />
-        <br>
-        <Check TValue="bool" @bind-Checked="@showPassword">Show Password</Check>
-        <br>
-        <Button Color="Color.Primary" Clicked="@HandleValidSubmit" Disabled="@DisabledLoginButton">Login</Button>
-        <br>
+        <EditForm Model="User" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+            <div class="form-floating mb-3">
+                <InputText id="floatingEmailOrUsername" class="form-control" placeholder="Email or Username" required
+                    @bind-Value="User.Username" />
+                <label for="floatingEmailOrUsername">Email or Username</label>
+            </div>
+            <div class="form-floating mb-3">
+                <InputText id="floatingPassword" type="@(showPassword ? "text" : "password")" class="form-control"
+                    placeholder="Password" required @bind-Value="User.Password" />
+                <label for="floatingPassword">Password</label>
+            </div>
+            <Check TValue="bool" @bind-Checked="@showPassword">Show Password</Check>
+            <br />
+            <button type="submit" class="btn btn-primary" disabled="@DisabledLoginButton">
+                @if (DisabledLoginButton)
+                {
+                    <Loading />
+                }
+                else
+                {
+                    <span>Login</span>
+                }
+            </button>
+        </EditForm>
+
         <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
     </div>
 }
@@ -38,7 +56,7 @@ else
     {
         token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
     }
-    protected async Task HandleValidSubmit()
+    protected async Task HandleLogin()
     {
         DisabledLoginButton = true;
         try

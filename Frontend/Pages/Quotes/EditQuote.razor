@@ -8,13 +8,13 @@
 
 @if (loading)
 {
-    <h2>Loading...</h2>
+    <Loading />
 }
 else
 {
     @if (string.IsNullOrEmpty(token))
     {
-        <h2>You need to login to delete your quotes!</h2>
+        <h2>You need to login to edit your quotes!</h2>
     }
     else
     {
@@ -25,27 +25,45 @@ else
             <h2>Edit Quote</h2>
             @if (editedQuote != null)
             {
-                <EditForm Model="@editedQuote" OnValidSubmit="@HandleValidSubmit">
+                <EditForm Model="@editedQuote" OnValidSubmit="@HandleEditQuote">
                     <DataAnnotationsValidator />
-                    Quote Content: *
-                    <InputText class="form-control" required @bind-Value="editedQuote.Quote" />
-                    <br>
-                    Who Said: *
-                    <InputText class="form-control" required @bind-Value="editedQuote.SaidBy" />
-                    <br>
-                    When It Was Said:
-                    <Addons>
-                        <Addon AddonType="AddonType.Body">
-                            <DatePicker @ref="@datePicker" TValue="DateOnly?" @bind-Date="@when" />
-                        </Addon>
-                        <Addon AddonType="AddonType.End">
-                            <Button Color="Color.Danger" Clicked="@(() => when = null)">
-                                <Icon Name="IconName.Delete" />
-                            </Button>
-                        </Addon>
-                    </Addons>
-                    <br>
-                    <button type="submit" class="btn btn-primary" disabled=@DisabledEditButton>Update</button>
+                    <div class="form-floating mb-3">
+                        <InputText id="floatingQuoteContent" class="form-control" placeholder="Quote Content" required
+                            @bind-Value="editedQuote.Quote" />
+                        <label for="floatingQuoteContent">Quote Content *</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <InputText id="floatingWhoSaid" class="form-control" placeholder="Who Said" required
+                            @bind-Value="editedQuote.SaidBy" />
+                        <label for="floatingWhoSaid">Who Said *</label>
+                    </div>
+                    <div class="mb-3">When It Was Said:
+                        <Addons>
+                            <Addon AddonType="AddonType.Body">
+                                <DatePicker @ref="@datePicker" TValue="DateOnly ?" @bind-Date="@when" />
+                            </Addon>
+                            <Addon AddonType="AddonType.End">
+                                <Button Color="Color.Danger" Clicked="@(() => when = null)">
+                                    <Icon Name="IconName.Delete" />
+                                </Button>
+                            </Addon>
+                        </Addons>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <InputText id="floatingSource" class="form-control" type="url" placeholder="Source (URL)"
+                            @bind-Value="editedQuote.Source" />
+                        <label for="floatingSource">Source (URL)</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary" disabled=@DisabledEditButton>
+                        @if (DisabledEditButton)
+                        {
+                            <Loading />
+                        }
+                        else
+                        {
+                            <span>Update</span>
+                        }
+                    </button>
                 </EditForm>
             }
             <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
@@ -77,7 +95,7 @@ else
         }
         loading = false;
     }
-    protected async Task HandleValidSubmit()
+    protected async Task HandleEditQuote()
     {
         DisabledEditButton = true;
         editedQuote.When = when?.ToString("yyyy-MM-dd");

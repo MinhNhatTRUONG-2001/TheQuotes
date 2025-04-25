@@ -20,7 +20,16 @@ else
         <div>Are you sure you want to delete this quote? <span class="text-danger">This action cannot be undone.</span>
         </div>
         <br>
-        <button class="btn btn-danger" disabled=@DisabledDeleteButton @onclick="Delete">Delete</button>
+        <button class="btn btn-danger" disabled=@DisabledDeleteButton @onclick="HandleDeleteQuote">
+            @if (DisabledDeleteButton)
+            {
+                <Loading />
+            }
+            else
+            {
+                <span>Delete</span>
+            }
+        </button>
         <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
     </div>
 }
@@ -39,7 +48,7 @@ else
         token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
         Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
     }
-    private async Task Delete()
+    private async Task HandleDeleteQuote()
     {
         DisabledDeleteButton = true;
         var response = await Http.DeleteAsync("/quotes/" + Id);

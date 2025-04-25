@@ -1,6 +1,6 @@
 ﻿<Card Shadow="Shadow.Default" Margin="Margin.Is3.OnY">
     <CardHeader Background="Background.Transparent">
-        <b>@Quote.User.DisplayedName</b> (@Quote.User.Username) &bull; @Quote.CreatedOn
+        <b>@Quote.User.DisplayedName</b> (@Quote.User.Username) &bull; @Quote.CreatedAt
     </CardHeader>
     <CardBody>
         <CardText TextAlignment="TextAlignment.Center" Margin="Margin.Is3.OnY">
@@ -13,6 +13,12 @@
         {
             <CardText TextAlignment="TextAlignment.Center">
                 @Quote.When
+            </CardText>
+        }
+        @if (!string.IsNullOrWhiteSpace(Quote.Source))
+        {
+            <CardText TextAlignment="TextAlignment.Center" Margin="Margin.Is3.OnY">
+                <a href="@Quote.Source">View Source</a>
             </CardText>
         }
     </CardBody>

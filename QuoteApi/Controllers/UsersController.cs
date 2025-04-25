@@ -34,13 +34,17 @@ namespace QuoteApi.Controllers
             {
                 return NotFound();
             }
-            if (string.IsNullOrWhiteSpace(userDTO.Username) || string.IsNullOrWhiteSpace(userDTO.DisplayedName) || string.IsNullOrWhiteSpace(userDTO.Password))
+            if (string.IsNullOrWhiteSpace(userDTO.Username) || string.IsNullOrWhiteSpace(userDTO.Email) || string.IsNullOrWhiteSpace(userDTO.DisplayedName) || string.IsNullOrWhiteSpace(userDTO.Password))
             {
                 return BadRequest("Username, displayed name or password is empty.");
             }
             if (userDTO.Username.Trim().Length > 32 && userDTO.Username.Trim().All(Char.IsLetterOrDigit))
             {
                 return BadRequest("Invalid username.");
+            }
+            if (userDTO.Email.Trim().Length > 50 || !ValidateEmailSyntax(userDTO.Email.Trim()))
+            {
+                return BadRequest("Invalid email.");
             }
             if (userDTO.DisplayedName.Trim().Length > 50)
             {
@@ -51,21 +55,33 @@ namespace QuoteApi.Controllers
                 return BadRequest("Invalid password.");
             }
 
-            var user = await _context.Users.Where(u => u.username == userDTO.Username.Trim()).FirstOrDefaultAsync();
-            if (user == null)
+            var user = await _context.Users
+                .Where(u => u.username == userDTO.Username.Trim())
+                .FirstOrDefaultAsync();
+            var user2 = await _context.Users
+                .Where(u => u.email == userDTO.Email.Trim())
+                .FirstOrDefaultAsync();
+            if (user != null)
             {
-                var newUser = new User();
-                newUser.username = userDTO.Username.Trim();
-                newUser.displayed_name = userDTO.DisplayedName.Trim();
-                string hashedPassword = HashPassword(userDTO.Password);
-                newUser.password = hashedPassword;
-                _context.Users.Add(newUser);
-                await _context.SaveChangesAsync();
-                return GenerateJwtToken(newUser);
+                return BadRequest("Username has already existed. Please use another one.");
+            }
+            else if (user2 != null)
+            {
+                return BadRequest("Email has already existed. Please use another one.");
             }
             else
             {
-                return BadRequest("User has already existed.");
+                var newUser = new User();
+                newUser.username = userDTO.Username.Trim();
+                newUser.email = userDTO.Email.Trim();
+                newUser.displayed_name = userDTO.DisplayedName.Trim();
+                string hashedPassword = HashPassword(userDTO.Password);
+                newUser.password = hashedPassword;
+                newUser.created_at = DateTime.UtcNow;
+                newUser.last_login = DateTime.UtcNow;
+                _context.Users.Add(newUser);
+                await _context.SaveChangesAsync();
+                return GenerateJwtToken(newUser);
             }
         }
 
@@ -79,16 +95,20 @@ namespace QuoteApi.Controllers
             }
             if (string.IsNullOrWhiteSpace(userDTO.Username) || string.IsNullOrWhiteSpace(userDTO.Password))
             {
-                return BadRequest("Username or password is empty.");
+                return BadRequest("Email or Username or password is empty.");
             }
-            var user = await _context.Users.Where(u => u.username == userDTO.Username.Trim()).FirstOrDefaultAsync();
+            var user = await _context.Users
+                .Where(u => u.username == userDTO.Username.Trim() || u.email == userDTO.Username.Trim())
+                .FirstOrDefaultAsync();
             if (user != null && Argon2.Verify(user.password, userDTO.Password))
             {
+                user.last_login = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
                 return GenerateJwtToken(user);
             }
             else
             {
-                return BadRequest("Username or password is incorrect.");
+                return BadRequest("Email or Username or Password is incorrect.");
             }
         }
 
@@ -120,7 +140,13 @@ namespace QuoteApi.Controllers
             }
             else
             {
-                return new UserInfoDTO { Id = user.id, Username = user.username, DisplayedName = user.displayed_name };
+                return new UserInfoDTO
+                {
+                    Id = user.id,
+                    Username = user.username,
+                    DisplayedName = user.displayed_name,
+                    AvatarUrl = user.avatar_url
+                };
             }
         }
 
@@ -157,6 +183,7 @@ namespace QuoteApi.Controllers
             else
             {
                 user.displayed_name = userDTO.DisplayedName.Trim();
+                user.last_updated = DateTime.UtcNow;
                 _context.Entry(user).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
                 return NoContent();
@@ -195,11 +222,12 @@ namespace QuoteApi.Controllers
                 {
                     string hashedPassword = HashPassword(userDTO.Password);
                     user.password = hashedPassword;
+                    user.last_updated = DateTime.UtcNow;
                     _context.Entry(user).State = EntityState.Modified;
                     await _context.SaveChangesAsync();
                     return NoContent();
                 }
-                else 
+                else
                 {
                     return BadRequest("Current password is incorrect.");
                 }
@@ -255,6 +283,12 @@ namespace QuoteApi.Controllers
                     return BadRequest("Password is incorrect.");
                 }
             }
+        }
+
+        private bool ValidateEmailSyntax(string email = "")
+        {
+            string pattern = @"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$";
+            return Regex.IsMatch(email, pattern);
         }
 
         private bool ValidatePassword(string password = "")

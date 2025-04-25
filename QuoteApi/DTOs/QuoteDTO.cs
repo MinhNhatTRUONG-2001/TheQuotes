@@ -6,5 +6,6 @@ public class QuoteDTO
     public string SaidBy { get; set; }
     public string? When { get; set; }
     public UserInfoDTO? User { get; set; }
-    public string? CreatedOn { get; set; }
+    public string? Source { get; set; }
+    public string CreatedAt { get; set; }
 }
