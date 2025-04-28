@@ -13,7 +13,7 @@ else
 {
     @if (!string.IsNullOrEmpty(token))
     {
-        <div class="mt-4 mb-2">
+        <div class="mt-4 mb-4">
             <a href="/my-quotes">
                 <Button Color="Color.Primary">My Quotes</Button>
             </a>
@@ -22,7 +22,7 @@ else
     }
     else
     {
-        <div class="mt-4 mb-2">
+        <div class="mt-4 mb-4">
             <a href="/login">
                 <Button Color="Color.Primary">Login</Button>
             </a>
@@ -31,42 +31,259 @@ else
             </a>
         </div>
     }
-    <h1>Latest created quotes</h1>
-    @if (top5Quotes != null)
+    <div>
+        <h3>Search Quotes</h3>
+        <div class="form-floating mb-3">
+            <InputText id="floatingQuoteContent" class="form-control" placeholder="Content" @bind-Value="searchModel.QuoteContent" />
+            <label for="floatingQuoteContent">Quote Content</label>
+        </div>
+        <div class="form-floating mb-3">
+            <InputText id="floatingWhoSaid" class="form-control" placeholder="Who Said" @bind-Value="searchModel.WhoSaid" />
+            <label for="floatingWhoSaid">Who Said</label>
+        </div>
+        @if (showMoreSearchCriteria)
+        {
+            <div class="mb-3">When It Was Said:
+                <div class="row">
+                    <div class="col-6">
+                        <Addons>
+                            <Addon AddonType="AddonType.Body">
+                                <DatePicker @ref="@StartSaidDatePicker" TValue="DateOnly ?" Date="searchModel.StartSaidDate"
+                                    Placeholder="From" DateChanged="OnStartSaidDateChanged" />
+                            </Addon>
+                            <Addon AddonType="AddonType.End">
+                                <Button Color="Color.Danger" Clicked="@(() => searchModel.StartSaidDate = null)">
+                                    <Icon Name="IconName.Delete" />
+                                </Button>
+                            </Addon>
+                        </Addons>
+                    </div>
+                    <div class="col-6">
+                        <Addons>
+                            <Addon AddonType="AddonType.Body">
+                                <DatePicker @ref="@EndSaidDatePicker" TValue="DateOnly ?" Date="searchModel.EndSaidDate"
+                                    Placeholder="To" DateChanged="OnEndSaidDateChanged" />
+                            </Addon>
+                            <Addon AddonType="AddonType.End">
+                                <Button Color="Color.Danger" Clicked="@(() => searchModel.EndSaidDate = null)">
+                                    <Icon Name="IconName.Delete" />
+                                </Button>
+                            </Addon>
+                        </Addons>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-6">
+                    <div class="form-floating mb-3">
+                        <InputText id="floatingUsername" class="form-control" placeholder="Username"
+                            @bind-Value="searchModel.Username" />
+                        <label for="floatingUsername">Username</label>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="form-floating mb-3">
+                        <InputText id="floatingDisplayedName" class="form-control" placeholder="DisplayedName"
+                            @bind-Value="searchModel.DisplayedName" />
+                        <label for="floatingDisplayedName">Displayed Name</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-3">Created at:
+                <div class="row">
+                    <div class="col-6">
+                        <Addons>
+                            <Addon AddonType="AddonType.Body">
+                                <DatePicker @ref="@StartCreationDatePicker" TValue="DateOnly ?"
+                                    Date="searchModel.StartCreationDate" Placeholder="From"
+                                    DateChanged="OnStartCreationDateChanged" />
+                            </Addon>
+                            <Addon AddonType="AddonType.End">
+                                <Button Color="Color.Danger" Clicked="@(() => searchModel.StartCreationDate = null)">
+                                    <Icon Name="IconName.Delete" />
+                                </Button>
+                            </Addon>
+                        </Addons>
+                    </div>
+                    <div class="col-6">
+                        <Addons>
+                            <Addon AddonType="AddonType.Body">
+                                <DatePicker @ref="@EndCreationDatePicker" TValue="DateOnly ?" Date="searchModel.EndCreationDate"
+                                    Placeholder="To" DateChanged="OnEndCreationDateChanged" />
+                            </Addon>
+                            <Addon AddonType="AddonType.End">
+                                <Button Color="Color.Danger" Clicked="@(() => searchModel.EndCreationDate = null)">
+                                    <Icon Name="IconName.Delete" />
+                                </Button>
+                            </Addon>
+                        </Addons>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <div class="text-center mb-3">
+        <button class="btn btn-secondary" @onclick="ToggleShowMoreSearchCriteria">
+            @if (showMoreSearchCriteria)
+            {
+                <Icon Name="IconName.Remove" /> <span>Show Less</span>
+            }
+            else
+            {
+                <Icon Name="IconName.Add" /> <span>Show More</span>
+            }
+        </button>
+    </div>
+    <div class="text-center">
+        <button class="btn btn-primary" @onclick="SearchQuotesAsync">Search</button>
+        <button class="btn btn-danger" @onclick="ClearAllSearchFields">Clear All & Reset</button>
+    </div>
+    <Divider />
+    @if (quotes != null)
     {
-        @foreach (var quote in top5Quotes)
+        <h1>@Title</h1>
+        @foreach (var quote in quotes)
         {
             <QuoteItem Quote=quote />
         }
     }
     else
     {
-        <Card Shadow="Shadow.Default" Margin="Margin.Is3.OnY">
-            <CardBody>
-                <Skeleton Animation="SkeletonAnimation.Wave">
-                    <SkeletonItem ColumnSize="ColumnSize.Is7" />
-                    <SkeletonItem ColumnSize="ColumnSize.Is4" />
-                    <SkeletonItem ColumnSize="ColumnSize.Is10" />
-                </Skeleton>
-            </CardBody>
-        </Card>
+        
     }
+    <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
 }
 
 @code {
-    private List<QuoteDTO>? top5Quotes;
+    private List<QuoteDTO>? quotes;
     private string? token;
     private bool loading = true;
+    private string Title = "Latest created quotes";
+    private SearchModel searchModel = new SearchModel();
+    private DatePicker<DateOnly?> StartSaidDatePicker;
+    private DatePicker<DateOnly?> EndSaidDatePicker;
+    private DatePicker<DateOnly?> StartCreationDatePicker;
+    private DatePicker<DateOnly?> EndCreationDatePicker;
+    private SnackbarStack snackbarStack;
+    private bool showMoreSearchCriteria = false;
+
     protected override async Task OnInitializedAsync()
     {
         token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
-        top5Quotes = await Http.GetFromJsonAsync<List<QuoteDTO>>("quotes");
+        quotes = await Http.GetFromJsonAsync<List<QuoteDTO>>("quotes");
         loading = false;
     }
-
     private async Task HandleLogout()
     {
         token = null;
         await JS.InvokeVoidAsync("cookieManager.deleteCookie", "token");
+    }
+
+    private async Task SearchQuotesAsync()
+    {
+        loading = true;
+
+        var queryParams = new Dictionary<string, string>();
+
+        if (!string.IsNullOrWhiteSpace(searchModel.QuoteContent))
+            queryParams.Add("content", searchModel.QuoteContent);
+        if (!string.IsNullOrWhiteSpace(searchModel.WhoSaid))
+            queryParams.Add("who_said", searchModel.WhoSaid);
+        if (searchModel.StartSaidDate.HasValue)
+            queryParams.Add("start_said_date", searchModel.StartSaidDate.Value.ToString("yyyy-MM-dd"));
+        if (searchModel.EndSaidDate.HasValue)
+            queryParams.Add("end_said_date", searchModel.EndSaidDate.Value.ToString("yyyy-MM-dd"));
+        if (!string.IsNullOrWhiteSpace(searchModel.Username))
+            queryParams.Add("username", searchModel.Username);
+        if (!string.IsNullOrWhiteSpace(searchModel.DisplayedName))
+            queryParams.Add("displayed_name", searchModel.DisplayedName);
+        if (searchModel.StartCreationDate.HasValue)
+            queryParams.Add("start_creation_date", searchModel.StartCreationDate.Value.ToString("yyyy-MM-dd"));
+        if (searchModel.EndCreationDate.HasValue)
+            queryParams.Add("end_creation_date", searchModel.EndCreationDate.Value.ToString("yyyy-MM-dd"));
+
+        if (queryParams.Count == 0) 
+        {
+            await snackbarStack.PushAsync("Please fill at least one search field.", SnackbarColor.Danger);
+            loading = false;
+            return;
+        }
+        var queryString = string.Join("&", queryParams.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
+        var url = $"quotes/search?{queryString}";
+
+        quotes = await Http.GetFromJsonAsync<List<QuoteDTO>>(url);
+        Title = $"Found {quotes?.Count ?? 0} result{(quotes?.Count > 1 ? "s" : "")}.";
+        loading = false;
+    }
+
+    private void ToggleShowMoreSearchCriteria()
+    {
+        showMoreSearchCriteria = !showMoreSearchCriteria;
+    }
+    private async Task OnStartSaidDateChanged(DateOnly? date)
+    {
+        if (searchModel.EndSaidDate.HasValue && date > searchModel.EndSaidDate)
+        {
+            await snackbarStack.PushAsync("Start date must be before end date at 'When It Was Said' field.", SnackbarColor.Danger);
+        }
+        else
+        {
+            searchModel.StartSaidDate = date;
+        }
+    }
+
+    private async Task OnEndSaidDateChanged(DateOnly? date)
+    {
+        if (searchModel.StartSaidDate.HasValue && date < searchModel.StartSaidDate)
+        {
+            await snackbarStack.PushAsync("End date must be after start date at 'When It Was Said' field.", SnackbarColor.Danger);
+        }
+        else
+        {
+            searchModel.EndSaidDate = date;
+        }
+    }
+
+    private async Task OnStartCreationDateChanged(DateOnly? date)
+    {
+        if (searchModel.EndCreationDate.HasValue && date > searchModel.EndCreationDate)
+        {
+            await snackbarStack.PushAsync("Start date must be before end date at 'Created at' field.", SnackbarColor.Danger);
+        }
+        else
+        {
+            searchModel.StartCreationDate = date;
+        }
+    }
+
+    private async Task OnEndCreationDateChanged(DateOnly? date)
+    {
+        if (searchModel.StartCreationDate.HasValue && date < searchModel.StartCreationDate)
+        {
+            await snackbarStack.PushAsync("End date must be after start date at 'Created at' field.", SnackbarColor.Danger);
+        }
+        else
+        {
+            searchModel.EndCreationDate = date;
+        }
+    }
+
+    private async Task ClearAllSearchFields()
+    {
+        searchModel = new SearchModel();
+        quotes = await Http.GetFromJsonAsync<List<QuoteDTO>>("quotes");
+        Title = "Latest created quotes";
+    }
+
+    private class SearchModel
+    {
+        public string? QuoteContent { get; set; }
+        public string? WhoSaid { get; set; }
+        public DateOnly? StartSaidDate { get; set; }
+        public DateOnly? EndSaidDate { get; set; }
+        public string? Username { get; set; }
+        public string? DisplayedName { get; set; }
+        public DateOnly? StartCreationDate { get; set; }
+        public DateOnly? EndCreationDate { get; set; }
     }
 }

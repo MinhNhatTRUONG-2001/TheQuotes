@@ -65,12 +65,12 @@ else
 @code {
     [Parameter]
     public string? User { get; set; }
-    public QuoteDTO newQuote = new QuoteDTO();
-    public DateOnly? when = DateOnly.FromDateTime(DateTime.Now);
+    private QuoteDTO newQuote = new QuoteDTO();
+    private DateOnly? when = DateOnly.FromDateTime(DateTime.Now);
     private SnackbarStack snackbarStack;
     private string? token;
     private bool DisabledAddButton = false;
-    DatePicker<DateOnly?> datePicker;
+    private DatePicker<DateOnly?> datePicker;
 
     protected override async Task OnInitializedAsync()
     {

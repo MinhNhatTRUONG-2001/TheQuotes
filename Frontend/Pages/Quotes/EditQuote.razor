@@ -76,13 +76,13 @@ else
     public string? User { get; set; }
     [Parameter]
     public int? Id { get; set; }
-    public QuoteDTO? editedQuote;
+    private QuoteDTO? editedQuote;
     DateOnly? when; // for type casting of the "When It Was Said" field
     private SnackbarStack snackbarStack;
     private string? token;
     private bool loading = true;
     private bool DisabledEditButton = false;
-    DatePicker<DateOnly?> datePicker;
+    private DatePicker<DateOnly?> datePicker;
 
     protected override async Task OnInitializedAsync()
     {

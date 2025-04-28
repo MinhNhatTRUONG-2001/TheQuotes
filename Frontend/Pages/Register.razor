@@ -17,15 +17,18 @@ else
         <EditForm Model="User" OnValidSubmit="HandleRegister">
             <DataAnnotationsValidator />
             <div class="form-floating mb-3">
-                <InputText id="floatingUsername" class="form-control" placeholder="Username" required @bind-Value="User.Username" />
+                <InputText id="floatingUsername" class="form-control" placeholder="Username" required
+                    @bind-Value="User.Username" />
                 <label for="floatingUsername">Username</label>
             </div>
             <div class="form-floating mb-3">
-                <InputText id="floatingEmail" class="form-control" type="email" placeholder="Email" required @bind-Value="User.Email" />
+                <InputText id="floatingEmail" class="form-control" type="email" placeholder="Email" required
+                    @bind-Value="User.Email" />
                 <label for="floatingEmail">Email</label>
             </div>
             <div class="form-floating mb-3">
-                <InputText id="floatingDisplayedName" class="form-control" placeholder="Displayed Name" required @bind-Value="User.DisplayedName" />
+                <InputText id="floatingDisplayedName" class="form-control" placeholder="Displayed Name" required
+                    @bind-Value="User.DisplayedName" />
                 <label for="floatingDisplayedName">Displayed Name</label>
             </div>
             <div class="form-floating mb-3">
@@ -38,8 +41,15 @@ else
                     placeholder="Retype Password" required @bind-Value="User.RetypePassword" />
                 <label for="floatingRetypePassword">Retype Password</label>
             </div>
-            <Check TValue="bool" @bind-Checked="@showPassword">Show Password</Check>
-            <br>
+            <Switch TValue="bool" @bind-Checked="@showPassword">Show Password</Switch>
+            <strong>Password rule:</strong>
+            <ul>
+                <li>Between 8-64 characters</li>
+                <li>At least one lowercase letter</li>
+                <li>At least one uppercase letter</li>
+                <li>At least one digit</li>
+                <li>At least one special letter</li>
+            </ul>
             <button type="submit" class="btn btn-primary" disabled=@DisabledRegisterButton>
                 @if (DisabledRegisterButton)
                 {

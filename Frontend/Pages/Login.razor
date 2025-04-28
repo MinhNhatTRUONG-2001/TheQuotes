@@ -27,7 +27,7 @@ else
                     placeholder="Password" required @bind-Value="User.Password" />
                 <label for="floatingPassword">Password</label>
             </div>
-            <Check TValue="bool" @bind-Checked="@showPassword">Show Password</Check>
+            <Switch TValue="bool" @bind-Checked="@showPassword">Show Password</Switch>
             <br />
             <button type="submit" class="btn btn-primary" disabled="@DisabledLoginButton">
                 @if (DisabledLoginButton)
