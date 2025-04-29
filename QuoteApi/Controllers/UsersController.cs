@@ -1,15 +1,11 @@
 ﻿using Isopoh.Cryptography.Argon2;
-using Isopoh.Cryptography.SecureArray;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using QuoteApi.Controllers.Helpers;
 using QuoteApi.Data;
 using QuoteApi.DTOs;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using System.Text.RegularExpressions;
+using QuoteApi.Services.Email;
+using server.Controllers.Helpers;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -20,10 +16,12 @@ namespace QuoteApi.Controllers
     public class UsersController : ControllerBase
     {
         private readonly QuoteContext _context;
+        private readonly IEmailService _emailService;
 
-        public UsersController(QuoteContext context)
+        public UsersController(QuoteContext context, IEmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         // POST: users/register
@@ -42,7 +40,7 @@ namespace QuoteApi.Controllers
             {
                 return BadRequest("Invalid username.");
             }
-            if (userDTO.Email.Trim().Length > 50 || !ValidateEmailSyntax(userDTO.Email.Trim()))
+            if (userDTO.Email.Trim().Length > 50 || !AuthHelpers.ValidateEmailSyntax(userDTO.Email.Trim()))
             {
                 return BadRequest("Invalid email.");
             }
@@ -50,7 +48,7 @@ namespace QuoteApi.Controllers
             {
                 return BadRequest("Invalid displayed name.");
             }
-            if (!ValidatePassword(userDTO.Password))
+            if (!AuthHelpers.ValidatePassword(userDTO.Password))
             {
                 return BadRequest("Invalid password.");
             }
@@ -75,13 +73,13 @@ namespace QuoteApi.Controllers
                 newUser.username = userDTO.Username.Trim();
                 newUser.email = userDTO.Email.Trim();
                 newUser.displayed_name = userDTO.DisplayedName.Trim();
-                string hashedPassword = HashPassword(userDTO.Password);
+                string hashedPassword = AuthHelpers.HashPassword(userDTO.Password);
                 newUser.password = hashedPassword;
                 newUser.created_at = DateTime.UtcNow;
                 newUser.last_login = DateTime.UtcNow;
                 _context.Users.Add(newUser);
                 await _context.SaveChangesAsync();
-                return GenerateJwtToken(newUser);
+                return AuthHelpers.GenerateJwtToken(newUser, 60 * 24); // 1 day
             }
         }
 
@@ -104,7 +102,7 @@ namespace QuoteApi.Controllers
             {
                 user.last_login = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
-                return GenerateJwtToken(user);
+                return AuthHelpers.GenerateJwtToken(user, 60 * 24); // 1 day
             }
             else
             {
@@ -202,7 +200,7 @@ namespace QuoteApi.Controllers
             {
                 token = token.Split("Bearer ")[1];
             }
-            if (string.IsNullOrWhiteSpace(userDTO.Password) || !ValidatePassword(userDTO.Password))
+            if (string.IsNullOrWhiteSpace(userDTO.Password) || !AuthHelpers.ValidatePassword(userDTO.Password))
             {
                 return BadRequest("Password is empty or invalid.");
             }
@@ -216,16 +214,16 @@ namespace QuoteApi.Controllers
                 return BadRequest("Invalid token.");
             }
             var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
-            if (user != null && Argon2.Verify(user.password, userDTO.CurrentPassword))
+            if (user != null)
             {
                 if (Argon2.Verify(user.password, userDTO.CurrentPassword))
                 {
-                    string hashedPassword = HashPassword(userDTO.Password);
+                    string hashedPassword = AuthHelpers.HashPassword(userDTO.Password);
                     user.password = hashedPassword;
                     user.last_updated = DateTime.UtcNow;
                     _context.Entry(user).State = EntityState.Modified;
                     await _context.SaveChangesAsync();
-                    return NoContent();
+                    return Ok("Password is changed successfully!");
                 }
                 else
                 {
@@ -234,7 +232,87 @@ namespace QuoteApi.Controllers
             }
             else
             {
+                return NotFound("User not found.");
+            }
+        }
+
+        [HttpPost("password_reset_request")]
+        public async Task<IActionResult> PasswordResetRequest(EmailDTO emailDTO)
+        {
+            if (_context.Users == null)
+            {
                 return NotFound();
+            }
+
+            if (string.IsNullOrWhiteSpace(emailDTO.Email))
+            {
+                return BadRequest("Email is empty.");
+            }
+            if (!AuthHelpers.ValidateEmailSyntax(emailDTO.Email))
+            {
+                return BadRequest("Invalid email syntax.");
+            }
+
+            var user = await _context.Users.Where(u => u.email == emailDTO.Email).FirstOrDefaultAsync();
+
+            string token, receiverEmail;
+            double expMinutes = 10;
+            if (user != null)
+            {
+                token = AuthHelpers.GenerateJwtToken(user, expMinutes);
+                receiverEmail = user.email;
+            }
+            else
+            {
+                return NotFound("Cannot find user with this email.");
+            }
+
+            var clientUrl = Environment.GetEnvironmentVariable("CLIENT_URL");
+            string subject = "The Quotes - Password Reset Request";
+            string body = $"<p>Please use the link below to reset your password:</p>" +
+                $"<a href=\"{clientUrl}/password-reset/{token}/\" target=\"_blank\">Reset password</a>" +
+                $"<p>The link is valid in <strong>{expMinutes} minutes</strong>.</p>";
+            await _emailService.SendEmailAsync(receiverEmail, subject, body);
+            return Ok("Password reset request is sent. Please check your email inbox!");
+        }
+
+        [HttpPut("password_reset/{token}")]
+        public async Task<IActionResult> PasswordReset([FromBody] UserDTO userDTO, string token = "")
+        {
+            if (_context.Users == null)
+            {
+                return NotFound();
+            }
+            if (token.Contains("Bearer "))
+            {
+                token = token.Split("Bearer ")[1];
+            }
+            if (string.IsNullOrWhiteSpace(userDTO.Password) || !AuthHelpers.ValidatePassword(userDTO.Password))
+            {
+                return BadRequest("Password is empty or invalid.");
+            }
+            int id;
+            try
+            {
+                id = JwtTokenDecoder.GetUserIdFromToken(token);
+            }
+            catch
+            {
+                return BadRequest("Invalid token.");
+            }
+            var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+            else
+            {
+                string hashedPassword = AuthHelpers.HashPassword(userDTO.Password);
+                user.password = hashedPassword;
+                user.last_updated = DateTime.UtcNow;
+                _context.Entry(user).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+                return Ok("Password is reset successfully! You can go to the login page now.");
             }
         }
 
@@ -282,59 +360,6 @@ namespace QuoteApi.Controllers
                 {
                     return BadRequest("Password is incorrect.");
                 }
-            }
-        }
-
-        private bool ValidateEmailSyntax(string email = "")
-        {
-            string pattern = @"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$";
-            return Regex.IsMatch(email, pattern);
-        }
-
-        private bool ValidatePassword(string password = "")
-        {
-            string digitPattern = @"[0-9]";
-            string lowercasePattern = @"[a-z]";
-            string uppercasePattern = @"[A-Z]";
-            string specialCharacterPattern = @"\W|_";
-
-            if (password.Length < 8 || password.Length > 64 ||
-                !Regex.IsMatch(password, digitPattern) ||
-                !Regex.IsMatch(password, lowercasePattern) ||
-                !Regex.IsMatch(password, uppercasePattern) ||
-                !Regex.IsMatch(password, specialCharacterPattern))
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        private string GenerateJwtToken(User user)
-        {
-            string jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? "";
-            var claims = new List<Claim> { new Claim("userId", user.id.ToString()) };
-            var jwtToken = new JwtSecurityToken(
-                claims: claims,
-                notBefore: DateTime.UtcNow,
-                expires: DateTime.UtcNow.AddDays(1),
-                signingCredentials: new SigningCredentials(
-                    new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey.PadRight(512 / 8, '\0'))),
-                    SecurityAlgorithms.HmacSha512
-                )
-            );
-            return new JwtSecurityTokenHandler().WriteToken(jwtToken);
-        }
-
-        private string HashPassword(string password)
-        {
-            byte[] salt = new byte[16];
-            new Random().NextBytes(salt);
-            var argon2Config = new Argon2Config { Password = Encoding.UTF8.GetBytes(password), Salt = salt };
-            var argon2 = new Argon2(argon2Config);
-            using (SecureArray<byte> hash = argon2.Hash())
-            {
-                return argon2Config.EncodeString(hash.Buffer);
             }
         }
     }

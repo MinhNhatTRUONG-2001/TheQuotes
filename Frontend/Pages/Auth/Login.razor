@@ -28,7 +28,9 @@ else
                 <label for="floatingPassword">Password</label>
             </div>
             <Switch TValue="bool" @bind-Checked="@showPassword">Show Password</Switch>
-            <br />
+            <div class="mb-3">
+                <a href="/password-reset-request">Forgot password?</a>
+            </div>
             <button type="submit" class="btn btn-primary" disabled="@DisabledLoginButton">
                 @if (DisabledLoginButton)
                 {
