@@ -6,6 +6,7 @@ using QuoteApi.Data;
 using QuoteApi.DTOs;
 using QuoteApi.Services.Email;
 using server.Controllers.Helpers;
+using SixLabors.ImageSharp;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -17,6 +18,7 @@ namespace QuoteApi.Controllers
     {
         private readonly QuoteContext _context;
         private readonly IEmailService _emailService;
+        private readonly long _imageFileSizeLimit = 3 * 1024 * 1024; // 3 MB
 
         public UsersController(QuoteContext context, IEmailService emailService)
         {
@@ -134,7 +136,7 @@ namespace QuoteApi.Controllers
             var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
             if (user == null)
             {
-                return NotFound();
+                return NotFound("User not found.");
             }
             else
             {
@@ -176,7 +178,7 @@ namespace QuoteApi.Controllers
             var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
             if (user == null)
             {
-                return NotFound();
+                return NotFound("User not found.");
             }
             else
             {
@@ -185,6 +187,74 @@ namespace QuoteApi.Controllers
                 _context.Entry(user).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
                 return NoContent();
+            }
+        }
+
+        // PUT users/change_avatar
+        [HttpPut("change_avatar")]
+        public async Task<IActionResult> ChangeUserAvatar([FromForm] IFormFile? avatarFile, [FromHeader(Name = "Authorization")] string token = "")
+        {
+            if (_context.Users == null)
+            {
+                return NotFound();
+            }
+
+            if (token.Contains("Bearer "))
+            {
+                token = token.Split("Bearer ")[1];
+            }
+            int id;
+            try
+            {
+                id = JwtTokenDecoder.GetUserIdFromToken(token);
+            }
+            catch
+            {
+                return BadRequest("Invalid token.");
+            }
+
+            if (avatarFile != null && avatarFile.Length > 0)
+            {
+                if (avatarFile.Length > _imageFileSizeLimit)
+                {
+                    return BadRequest($"File size exceeds the limit of {_imageFileSizeLimit / (1024 * 1024)} MB!");
+                }
+                if (!avatarFile.ContentType.StartsWith("image/"))
+                {
+                    return BadRequest("File type is not allowed!");
+                }
+                using var stream = avatarFile.OpenReadStream();
+                using var image = await Image.LoadAsync(stream);
+
+                int width = image.Width;
+                int height = image.Height;
+
+                if (width < 200 || height < 200)
+                {
+                    return BadRequest("Image must be at least 200x200 pixels.");
+                }
+                if (width > 5000 || height > 5000) // Imagekit does not support displaying images larger than 5000x5000 pixels (maybe just on Free plan)
+                {
+                    return BadRequest("Image dimension is too large. Maximum is 5000x5000 pixels.");
+                }
+            }
+            
+            var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+            else
+            {
+                List<string> responseMessage = await FileUploadHelper.UpdateUserAvatarToImageKit(_context, user, avatarFile, null);
+                if (responseMessage[0] == "BadRequest")
+                {
+                    return BadRequest(responseMessage[1]);
+                }
+                else
+                {
+                    return Ok(responseMessage[1]);
+                }
             }
         }
 
@@ -344,7 +414,7 @@ namespace QuoteApi.Controllers
             var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
             if (user == null)
             {
-                return NotFound();
+                return NotFound("User not found.");
             }
             else
             {

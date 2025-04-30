@@ -32,7 +32,7 @@ namespace QuoteApi.Controllers
                             .ToListAsync();
             if (top5Quotes == null)
             {
-                return NotFound();
+                return NotFound("No quote found.");
             }
             List<QuoteDTO> top5QuotesDto = new List<QuoteDTO>();
             foreach (var quote in top5Quotes)
@@ -48,7 +48,8 @@ namespace QuoteApi.Controllers
                     {
                         Id = quote.User.id,
                         Username = quote.User.username,
-                        DisplayedName = quote.User.displayed_name
+                        DisplayedName = quote.User.displayed_name,
+                        AvatarUrl = quote.User.avatar_url
                     },
                     CreatedAt = quote.created_at.ToString("yyyy-MM-dd HH:mm")
                 };
@@ -72,7 +73,7 @@ namespace QuoteApi.Controllers
                         .ToListAsync();
             if (quotes == null)
             {
-                return NotFound();
+                return NotFound("Quote not found.");
             }
 
             List<QuoteDTO> quotesDto = new List<QuoteDTO>();
@@ -89,7 +90,8 @@ namespace QuoteApi.Controllers
                     {
                         Id = quote.User.id,
                         Username = quote.User.username,
-                        DisplayedName = quote.User.displayed_name
+                        DisplayedName = quote.User.displayed_name,
+                        AvatarUrl = quote.User.avatar_url
                     },
                     CreatedAt = quote.created_at.ToString("yyyy-MM-dd HH:mm")
                 };
@@ -110,7 +112,7 @@ namespace QuoteApi.Controllers
 
             if (quote == null)
             {
-                return NotFound();
+                return NotFound("Quote not found.");
             }
 
             QuoteDTO quoteDto = new QuoteDTO
@@ -123,7 +125,8 @@ namespace QuoteApi.Controllers
                 {
                     Id = quote.User.id,
                     Username = quote.User.username,
-                    DisplayedName = quote.User.displayed_name
+                    DisplayedName = quote.User.displayed_name,
+                    AvatarUrl = quote.User.avatar_url
                 },
                 CreatedAt = quote.created_at.ToString("yyyy-MM-dd HH:mm")
             };
@@ -144,7 +147,7 @@ namespace QuoteApi.Controllers
             var quotes = await _context.Quotes.Include(q => q.User).ToListAsync();
             if (quotes == null)
             {
-                return NotFound();
+                return NotFound("No quotes found.");
             }
             if (!string.IsNullOrWhiteSpace(content))
             {
@@ -197,7 +200,8 @@ namespace QuoteApi.Controllers
                     {
                         Id = quote.User.id,
                         Username = quote.User.username,
-                        DisplayedName = quote.User.displayed_name
+                        DisplayedName = quote.User.displayed_name,
+                        AvatarUrl = quote.User.avatar_url
                     },
                     CreatedAt = quote.created_at.ToString("yyyy-MM-dd HH:mm")
                 };
@@ -236,7 +240,7 @@ namespace QuoteApi.Controllers
             int userId = JwtTokenDecoder.GetUserIdFromToken(token);
             if (quote == null)
             {
-                return NotFound("Quote is not found.");
+                return NotFound("Quote not found.");
             }
             if (quote.user_id != userId)
             {
@@ -265,7 +269,7 @@ namespace QuoteApi.Controllers
             {
                 if (!QuoteExists(id))
                 {
-                    return NotFound("Quote is not found.");
+                    return NotFound("Quote not found.");
                 }
                 else
                 {
@@ -366,7 +370,7 @@ namespace QuoteApi.Controllers
 
             if (quote == null)
             {
-                return NotFound("Quote is not found.");
+                return NotFound("Quote not found.");
             }
             if (quote.user_id != userId)
             {
