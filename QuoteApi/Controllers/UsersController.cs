@@ -145,7 +145,34 @@ namespace QuoteApi.Controllers
                     Id = user.id,
                     Username = user.username,
                     DisplayedName = user.displayed_name,
-                    AvatarUrl = user.avatar_url
+                    AvatarUrl = user.avatar_url,
+                    AboutMe = user.about_me,
+                };
+            }
+        }
+
+        // GET users/info/3
+        [HttpGet("info/{id}")]
+        public async Task<ActionResult<UserInfoDTO>> GetUserInfoById(int id)
+        {
+            if (_context.Users == null)
+            {
+                return NotFound();
+            }
+            var user = await _context.Users.Where(u => u.id == id).FirstOrDefaultAsync();
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+            else
+            {
+                return new UserInfoDTO
+                {
+                    Id = user.id,
+                    Username = user.username,
+                    DisplayedName = user.displayed_name,
+                    AvatarUrl = user.avatar_url,
+                    AboutMe = user.about_me,
                 };
             }
         }
@@ -162,9 +189,13 @@ namespace QuoteApi.Controllers
             {
                 token = token.Split("Bearer ")[1];
             }
-            if (string.IsNullOrWhiteSpace(userDTO.DisplayedName) || userDTO.DisplayedName.Trim().Length > 50)
+            if (!string.IsNullOrWhiteSpace(userDTO.DisplayedName) && userDTO.DisplayedName.Trim().Length > 50)
             {
-                return BadRequest("Displayed name is empty or invalid.");
+                return BadRequest("Displayed name is too long.");
+            }
+            if (!string.IsNullOrWhiteSpace(userDTO.AboutMe) && userDTO.AboutMe.Trim().Length > 2000)
+            {
+                return BadRequest("About me is too long.");
             }
             int id;
             try
@@ -182,7 +213,14 @@ namespace QuoteApi.Controllers
             }
             else
             {
-                user.displayed_name = userDTO.DisplayedName.Trim();
+                if (!string.IsNullOrWhiteSpace(userDTO.DisplayedName))
+                {
+                    user.displayed_name = userDTO.DisplayedName.Trim();
+                }
+                if (!string.IsNullOrWhiteSpace(userDTO.AboutMe))
+                {
+                    user.about_me = userDTO.AboutMe.Trim();
+                }
                 user.last_updated = DateTime.UtcNow;
                 _context.Entry(user).State = EntityState.Modified;
                 await _context.SaveChangesAsync();

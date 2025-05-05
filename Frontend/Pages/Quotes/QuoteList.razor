@@ -1,9 +1,5 @@
-﻿@page "/"
-
-@inject HttpClient Http
+﻿@inject HttpClient Http
 @inject IJSRuntime JS
-
-<PageTitle>The Quotes</PageTitle>
 
 @if (loading)
 {
@@ -11,27 +7,11 @@
 }
 else
 {
-    @if (!string.IsNullOrEmpty(token))
-    {
-        <div class="mt-4 mb-4">
-            <Button Color="Color.Danger" Clicked="@HandleLogout">Logout</Button>
-        </div>
-    }
-    else
-    {
-        <div class="mt-4 mb-4">
-            <a href="/login">
-                <Button Color="Color.Primary">Login</Button>
-            </a>
-            <a href="/register">
-                <Button Color="Color.Primary">Register</Button>
-            </a>
-        </div>
-    }
-    <div>
+    <div class="mt-4">
         <h3>Search Quotes</h3>
         <div class="form-floating mb-3">
-            <InputText id="floatingQuoteContent" class="form-control" placeholder="Content" @bind-Value="searchModel.QuoteContent" />
+            <InputText id="floatingQuoteContent" class="form-control" placeholder="Quote Content"
+                @bind-Value="searchModel.QuoteContent" />
             <label for="floatingQuoteContent">Quote Content</label>
         </div>
         @if (showMoreSearchCriteria)
@@ -67,22 +47,6 @@ else
                                 </Button>
                             </Addon>
                         </Addons>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-6">
-                    <div class="form-floating mb-3">
-                        <InputText id="floatingUsername" class="form-control" placeholder="Username"
-                            @bind-Value="searchModel.Username" />
-                        <label for="floatingUsername">Username</label>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="form-floating mb-3">
-                        <InputText id="floatingDisplayedName" class="form-control" placeholder="DisplayedName"
-                            @bind-Value="searchModel.DisplayedName" />
-                        <label for="floatingDisplayedName">Displayed Name</label>
                     </div>
                 </div>
             </div>
@@ -132,84 +96,84 @@ else
         </button>
     </div>
     <div class="text-center">
-        <button class="btn btn-primary" @onclick="SearchQuotesAsync">Search</button>
+        <button class="btn btn-primary" @onclick="SearchQuotes">Search</button>
         <button class="btn btn-danger" @onclick="ClearAllSearchFields">Clear All & Reset</button>
     </div>
-    <Divider />
-    @if (quotes != null)
-    {
-        <h1>@Title</h1>
-        @foreach (var quote in quotes)
+    <div class="mt-4 mb-2">
+        <div class="d-flex justify-content-between">
+            <h2>Quotes of @User?.DisplayedName</h2>
+            @if (UserId == null)
+            {
+                <a href="/my-quotes/add">
+                    <Button Color="Color.Primary">
+                        <Icon Name="IconName.Add" /> Add Quote
+                    </Button>
+                </a>
+            }
+        </div>
+
+        @if (quotes != null)
         {
-            <QuoteItem Quote=quote />
+            @foreach (var quote in quotes)
+            {
+                if (UserId == null)
+                {
+                    EditLink = "/my-quotes/edit/" + quote.Id;
+                    DeleteLink = "/my-quotes/delete/" + quote.Id;
+                }
+                <QuoteItem Quote=quote EditLink=@EditLink DeleteLink="@DeleteLink" />
+            }
         }
-    }
-    else
-    {
-        
-    }
+    </div>
     <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
 }
 
 @code {
-    private List<QuoteDTO>? quotes;
+    [Parameter]
+    public int? UserId { get; set; }
     private string? token;
     private bool loading = true;
-    private string Title = "Latest created quotes";
+    private List<QuoteDTO>? userQuotes;
+    private List<QuoteDTO>? quotes;
+    private UserInfoDTO? User;
+    private string? EditLink;
+    private string? DeleteLink;
     private SearchModel searchModel = new SearchModel();
-    private DatePicker<DateOnly?> StartSaidDatePicker;
-    private DatePicker<DateOnly?> EndSaidDatePicker;
-    private DatePicker<DateOnly?> StartCreationDatePicker;
-    private DatePicker<DateOnly?> EndCreationDatePicker;
+    DatePicker<DateOnly?> StartSaidDatePicker;
+    DatePicker<DateOnly?> EndSaidDatePicker;
+    DatePicker<DateOnly?> StartCreationDatePicker;
+    DatePicker<DateOnly?> EndCreationDatePicker;
     private SnackbarStack snackbarStack;
     private bool showMoreSearchCriteria = false;
 
     protected override async Task OnInitializedAsync()
     {
-        token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
-        quotes = await Http.GetFromJsonAsync<List<QuoteDTO>>("quotes");
-        loading = false;
-    }
-    private async Task HandleLogout()
-    {
-        token = null;
-        await JS.InvokeVoidAsync("cookieManager.deleteCookie", "token");
-    }
-
-    private async Task SearchQuotesAsync()
-    {
-        loading = true;
-
-        var queryParams = new Dictionary<string, string>();
-
-        if (!string.IsNullOrWhiteSpace(searchModel.QuoteContent))
-            queryParams.Add("content", searchModel.QuoteContent);
-        if (!string.IsNullOrWhiteSpace(searchModel.WhoSaid))
-            queryParams.Add("who_said", searchModel.WhoSaid);
-        if (searchModel.StartSaidDate.HasValue)
-            queryParams.Add("start_said_date", searchModel.StartSaidDate.Value.ToString("yyyy-MM-dd"));
-        if (searchModel.EndSaidDate.HasValue)
-            queryParams.Add("end_said_date", searchModel.EndSaidDate.Value.ToString("yyyy-MM-dd"));
-        if (!string.IsNullOrWhiteSpace(searchModel.Username))
-            queryParams.Add("username", searchModel.Username);
-        if (!string.IsNullOrWhiteSpace(searchModel.DisplayedName))
-            queryParams.Add("displayed_name", searchModel.DisplayedName);
-        if (searchModel.StartCreationDate.HasValue)
-            queryParams.Add("start_creation_date", searchModel.StartCreationDate.Value.ToString("yyyy-MM-dd"));
-        if (searchModel.EndCreationDate.HasValue)
-            queryParams.Add("end_creation_date", searchModel.EndCreationDate.Value.ToString("yyyy-MM-dd"));
-
-        if (queryParams.Count == 0) 
+        if (UserId == null)
         {
-            await snackbarStack.PushAsync("Please fill at least one search field.", SnackbarColor.Danger);
-            loading = false;
-            return;
+            token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
+            var request = new HttpRequestMessage(HttpMethod.Get, "users/info");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var response = await Http.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                User = await response.Content.ReadFromJsonAsync<UserInfoDTO>();
+            }
+            if (User != null)
+            {
+                userQuotes = await Http.GetFromJsonAsync<List<QuoteDTO>>("quotes/user/" + User.Id);
+            }
         }
-        var queryString = string.Join("&", queryParams.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
-        var url = $"quotes/search?{queryString}";
-
-        quotes = await Http.GetFromJsonAsync<List<QuoteDTO>>(url);
-        Title = $"Found {quotes?.Count ?? 0} result{(quotes?.Count > 1 ? "s" : "")}.";
+        else
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, "users/info/" + UserId);
+            var response = await Http.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                User = await response.Content.ReadFromJsonAsync<UserInfoDTO>();
+            }
+            userQuotes = await Http.GetFromJsonAsync<List<QuoteDTO>>("quotes/user/" + UserId);
+        }
+        quotes = userQuotes;
         loading = false;
     }
 
@@ -265,11 +229,57 @@ else
         }
     }
 
-    private async Task ClearAllSearchFields()
+    private async Task SearchQuotes()
+    {
+        var filteredQuotes = userQuotes;
+        bool isAnySearchFieldFilled = false;
+        if (!string.IsNullOrWhiteSpace(searchModel.QuoteContent))
+        {
+            isAnySearchFieldFilled = true;
+            filteredQuotes = filteredQuotes?.Where(q => q.Quote.Contains(searchModel.QuoteContent,
+            StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+        if (!string.IsNullOrWhiteSpace(searchModel.WhoSaid))
+        {
+            isAnySearchFieldFilled = true;
+            filteredQuotes = filteredQuotes?.Where(q => q.SaidBy.Contains(searchModel.WhoSaid,
+            StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+        if (searchModel.StartSaidDate.HasValue)
+        {
+            isAnySearchFieldFilled = true;
+            filteredQuotes = filteredQuotes?.Where(q => !string.IsNullOrEmpty(q.When) && DateOnly.Parse(q.When) >=
+            searchModel.StartSaidDate).ToList();
+        }
+        if (searchModel.EndSaidDate.HasValue)
+        {
+            isAnySearchFieldFilled = true;
+            filteredQuotes = filteredQuotes?.Where(q => !string.IsNullOrEmpty(q.When) && DateOnly.Parse(q.When) <=
+            searchModel.EndSaidDate).ToList();
+        }
+        if (searchModel.StartCreationDate.HasValue)
+        {
+            isAnySearchFieldFilled = true;
+            filteredQuotes = filteredQuotes?.Where(q => DateTime.Parse(q.CreatedAt) >=
+            DateTime.Parse(searchModel.StartCreationDate.Value.ToShortDateString())).ToList();
+        }
+        if (searchModel.EndCreationDate.HasValue)
+        {
+            isAnySearchFieldFilled = true;
+            filteredQuotes = filteredQuotes?.Where(q => DateTime.Parse(q.CreatedAt) <=
+            DateTime.Parse(searchModel.EndCreationDate.Value.ToShortDateString())).ToList();
+        }
+        if (!isAnySearchFieldFilled)
+        {
+            await snackbarStack.PushAsync("Please fill at least one search field.", SnackbarColor.Danger);
+            return;
+        }
+        quotes = filteredQuotes;
+    }
+    private void ClearAllSearchFields()
     {
         searchModel = new SearchModel();
-        quotes = await Http.GetFromJsonAsync<List<QuoteDTO>>("quotes");
-        Title = "Latest created quotes";
+        quotes = userQuotes;
     }
 
     private class SearchModel
@@ -278,8 +288,6 @@ else
         public string? WhoSaid { get; set; }
         public DateOnly? StartSaidDate { get; set; }
         public DateOnly? EndSaidDate { get; set; }
-        public string? Username { get; set; }
-        public string? DisplayedName { get; set; }
         public DateOnly? StartCreationDate { get; set; }
         public DateOnly? EndCreationDate { get; set; }
     }

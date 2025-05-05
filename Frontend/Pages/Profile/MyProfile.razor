@@ -2,6 +2,7 @@
 
 @inject HttpClient Http
 @inject IJSRuntime JS
+@using Frontend.Pages.Quotes
 
 <PageTitle>My Profile</PageTitle>
 
@@ -36,9 +37,13 @@ else
             }
             <img src="@(!string.IsNullOrWhiteSpace(User?.AvatarUrl) ? User.AvatarUrl : "blank-avatar.png")" alt="@($"{User?.DisplayedName}'s Avatar")" style="width: 200px; height: 200px;" class="mb-3" />
             <h2>@User?.DisplayedName</h2>
+            <div>(@User?.Username)</div>
+            <div class="mx-4">@User?.AboutMe</div>
         </div>
+        <Divider />
+        <QuoteList />
     }
-    <Modal @ref="modalRef">
+    <Modal @ref="deleteAvatarModalRef">
         <ModalContent Centered>
             <ModalHeader>
                 <ModalTitle>Confirm deleting avatar</ModalTitle>
@@ -48,7 +53,7 @@ else
                 Are you sure you want to delete your avatar? This action cannot be undone.
             </ModalBody>
             <ModalFooter>
-                <Button Color="Color.Secondary" Clicked="@(() => modalRef.Hide())">No</Button>
+                <Button Color="Color.Secondary" Clicked="@(() => deleteAvatarModalRef.Hide())">No</Button>
                 <Button Color="Color.Primary" Clicked="@DeleteAvatar">Yes</Button>
             </ModalFooter>
         </ModalContent>
@@ -62,11 +67,11 @@ else
     private bool avatarLoading = false;
     private UserInfoDTO? User;
     private SnackbarStack snackbarStack;
-    private Modal modalRef;
+    private Modal deleteAvatarModalRef;
 
     private Task ShowModal()
     {
-        return modalRef.Show();
+        return deleteAvatarModalRef.Show();
     }
 
     protected override async Task OnInitializedAsync()
@@ -153,6 +158,6 @@ else
             await snackbarStack.PushAsync(errorMessage, SnackbarColor.Danger);
         }
         avatarLoading = false;
-        await modalRef.Hide();
+        await deleteAvatarModalRef.Hide();
     }
 }

@@ -19,7 +19,7 @@ else
     else
     {
         <div class="mt-4 mb-2">
-            <Button Color="Color.Primary" Type="ButtonType.Link" To="/my-quotes">
+            <Button Color="Color.Primary" Type="ButtonType.Link" To="/my-profile">
                 <Icon Name="IconName.AngleLeft" /> My Quotes
             </Button>
             <h2>Edit Quote</h2>
@@ -104,7 +104,7 @@ else
         {
             await snackbarStack.PushAsync("Quote edited successfully!", SnackbarColor.Success);
             await Task.Delay(1000);
-            NavigationManager.NavigateTo("/my-quotes");
+            NavigationManager.NavigateTo("/my-profile");
         }
         else
         {

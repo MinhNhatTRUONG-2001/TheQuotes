@@ -14,6 +14,7 @@ namespace QuoteApi.Data
         public DateTime? last_updated { get; set; }
         public string email { get; set; }
         public string? avatar_url { get; set; }
+        public string? about_me { get; set; }
         public ICollection<Quote> quotes { get; set; }
     }
 }

@@ -7,5 +7,6 @@
         public string? Email { get; set; }
         public string? DisplayedName { get; set; }
         public string? AvatarUrl { get; set; }
+        public string? AboutMe { get; set; }
     }
 }

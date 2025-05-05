@@ -1,0 +1,41 @@
+@page "/profile/{UserId:int}"
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+@using Frontend.Pages.Quotes
+
+<PageTitle>@User?.DisplayedName's Profile</PageTitle>
+
+@if (loading)
+{
+    <Loading />
+}
+else
+{
+    <div class="text-center mt-4">
+        <img src="@(!string.IsNullOrWhiteSpace(User?.AvatarUrl) ? User.AvatarUrl : "blank-avatar.png")" alt="@($"{User?.DisplayedName}'s Avatar")" style="width: 200px; height: 200px;" class="mb-3" />
+        <h2>@User?.DisplayedName</h2>
+        <div>(@User?.Username)</div>
+        <div class="mx-4">@User?.AboutMe</div>
+    </div>
+    <Divider />
+    <QuoteList UserId="@UserId"/>
+}
+
+@code {
+    [Parameter]
+    public int? UserId { get; set; }
+    private bool loading = true;
+    private UserInfoDTO? User;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "users/info/" + UserId);
+        var response = await Http.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            User = await response.Content.ReadFromJsonAsync<UserInfoDTO>();
+        }
+        loading = false;
+    }
+}
