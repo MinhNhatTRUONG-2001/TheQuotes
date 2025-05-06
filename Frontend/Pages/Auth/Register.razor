@@ -3,6 +3,7 @@
 @inject HttpClient Http
 @using System.Net.Http.Json
 @inject IJSRuntime JS
+@inject TokenService TokenService
 
 <PageTitle>Register</PageTitle>
 
@@ -93,6 +94,7 @@ else
                 {
                     var token = response.Content.ReadAsStringAsync().Result;
                     await JS.InvokeVoidAsync("cookieManager.setCookie", "token", token, 1);
+                    TokenService.SetToken(token);
                     NavigationManager.NavigateTo("/");
                 }
                 else

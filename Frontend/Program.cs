@@ -18,4 +18,6 @@ builder.Services
     .AddBootstrap5Providers()
     .AddFontAwesomeIcons();
 
+builder.Services.AddSingleton<TokenService>();
+
 await builder.Build().RunAsync();

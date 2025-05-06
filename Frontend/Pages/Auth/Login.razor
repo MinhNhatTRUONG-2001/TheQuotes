@@ -2,6 +2,7 @@
 @using Blazorise.Snackbar
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject TokenService TokenService
 
 @page "/login"
 
@@ -68,6 +69,7 @@ else
             {
                 var token = response.Content.ReadAsStringAsync().Result;
                 await JS.InvokeVoidAsync("cookieManager.setCookie", "token", token, 1);
+                TokenService.SetToken(token);
                 NavigationManager.NavigateTo("/");
             }
             else

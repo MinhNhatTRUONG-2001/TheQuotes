@@ -1,4 +1,9 @@
-﻿<div class="top-row ps-2 navbar navbar-dark bg-dark">
+﻿@inject IJSRuntime JS
+@inject TokenService TokenService
+@inject NavigationManager NavigationManager
+@implements IDisposable
+
+<div class="top-row ps-2 navbar navbar-dark bg-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">THE QUOTES</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -6,24 +11,90 @@
         </button>
     </div>
 </div>
-
-<div class="@NavMenuCssClass nav-scrollable bg-dark" @onclick="ToggleNavMenu">
-    <nav class="flex-column">
-        <div class="nav-item px-4 py-2 text-white">
-            <NavLink class="nav-link" href="/my-profile" Match="NavLinkMatch.All">
-                <Icon Name="IconName.User" /> Profile
-            </NavLink>
-        </div>
-    </nav>
-</div>
+@if (token == null)
+{
+    <div class="@NavMenuCssClass nav-scrollable bg-dark" @onclick="ToggleNavMenu">
+        <nav class="flex-column">
+            <div class="nav-item px-4 py-2 text-white">
+                <NavLink class="nav-link" href="/login" Match="NavLinkMatch.All">
+                    <span class="fas fa-sign-in-alt"></span> &nbsp; Login
+                </NavLink>
+            </div>
+        </nav>
+    </div>
+    <div class="@NavMenuCssClass nav-scrollable bg-dark" @onclick="ToggleNavMenu">
+        <nav class="flex-column">
+            <div class="nav-item px-4 py-2 text-white">
+                <NavLink class="nav-link" href="/register" Match="NavLinkMatch.All">
+                    <span class="fas fa-user-plus"></span> &nbsp; Register
+                </NavLink>
+            </div>
+        </nav>
+    </div>
+}
+else {
+    <div class="@NavMenuCssClass nav-scrollable bg-dark" @onclick="ToggleNavMenu">
+        <nav class="flex-column">
+            <div class="nav-item px-4 py-2 text-white">
+                <NavLink class="nav-link" href="/my-profile" Match="NavLinkMatch.All">
+                    <Icon Name="IconName.User" /> &nbsp; My Profile
+                </NavLink>
+            </div>
+        </nav>
+    </div>
+    <div class="@NavMenuCssClass nav-scrollable bg-dark" @onclick="ToggleNavMenu">
+        <nav class="flex-column">
+            <div class="nav-item px-4 py-2 text-white">
+                <NavLink class="nav-link" href="/account-settings" Match="NavLinkMatch.All">
+                    <Icon Name="IconName.Settings" /> &nbsp; Account Settings
+                </NavLink>
+            </div>
+        </nav>
+    </div>
+    <div class="@NavMenuCssClass nav-scrollable bg-dark" @onclick="ToggleNavMenu">
+        <nav class="flex-column">
+            <div class="nav-item px-4 py-2 text-white">
+                <Button Color="Color.Danger" Type="ButtonType.Link" @onclick="HandleLogout">
+                    <span class="fas fa-sign-out-alt"></span> &nbsp; Logout
+                </Button>
+            </div>
+        </nav>
+    </div>
+}
 
 @code {
+    private string? token;
     private bool collapseNavMenu = true;
-
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
+    protected override void OnInitialized()
+    {
+        TokenService.OnTokenChanged += HandleTokenChanged;
+        token = TokenService.Token;
+    }
+    private void HandleTokenChanged()
+    {
+        token = TokenService.Token;
+        InvokeAsync(StateHasChanged); // Force re-render
+    }
+    public void Dispose()
+    {
+        TokenService.OnTokenChanged -= HandleTokenChanged;
+    }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
+    }
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+    private async Task HandleLogout()
+    {
+        token = null;
+        await JS.InvokeVoidAsync("cookieManager.deleteCookie", "token");
+        TokenService.SetToken(null);
+        NavigationManager.NavigateTo("/");
     }
 }

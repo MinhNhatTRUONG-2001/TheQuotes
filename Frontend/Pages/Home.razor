@@ -11,24 +11,7 @@
 }
 else
 {
-    @if (!string.IsNullOrEmpty(token))
-    {
-        <div class="mt-4 mb-4">
-            <Button Color="Color.Danger" Clicked="@HandleLogout">Logout</Button>
-        </div>
-    }
-    else
-    {
-        <div class="mt-4 mb-4">
-            <a href="/login">
-                <Button Color="Color.Primary">Login</Button>
-            </a>
-            <a href="/register">
-                <Button Color="Color.Primary">Register</Button>
-            </a>
-        </div>
-    }
-    <div>
+    <div class="mt-4">
         <h3>Search Quotes</h3>
         <div class="form-floating mb-3">
             <InputText id="floatingQuoteContent" class="form-control" placeholder="Content" @bind-Value="searchModel.QuoteContent" />
