@@ -224,7 +224,7 @@ namespace QuoteApi.Controllers
                 user.last_updated = DateTime.UtcNow;
                 _context.Entry(user).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
-                return NoContent();
+                return Ok("User info is changed successfully!");
             }
         }
 

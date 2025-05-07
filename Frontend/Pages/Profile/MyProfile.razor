@@ -28,17 +28,27 @@ else
                 </Tooltip>
                 @if (User?.AvatarUrl != null)
                 {
-                    <button class="btn btn-danger" @onclick="@ShowModal" disabled="@avatarLoading">Delete Avatar</button>
+                    <button class="btn btn-danger" @onclick="@ShowDeleteAvatarModal" disabled="@avatarLoading">Delete
+                        Avatar</button>
                 }
             </div>
             @if (avatarLoading)
             {
                 <Loading />
             }
-            <img src="@(!string.IsNullOrWhiteSpace(User?.AvatarUrl) ? User.AvatarUrl : "blank-avatar.png")" alt="@($"{User?.DisplayedName}'s Avatar")" style="width: 200px; height: 200px;" class="mb-3" />
+            <img src="@(!string.IsNullOrWhiteSpace(User?.AvatarUrl) ? User.AvatarUrl : "blank-avatar.png")"
+                alt="@($"{User?.DisplayedName}'s Avatar")" style="width: 200px; height: 200px;" class="mb-3" />
             <h2>@User?.DisplayedName</h2>
             <div>(@User?.Username)</div>
             <div class="mx-4">@User?.AboutMe</div>
+            <div class="text-center mt-2">
+                <button class="btn btn-primary" @onclick="ShowEditProfileModal">
+                    <Icon Name="IconName.Pen" /> Edit profile
+                </button>
+                <Button Color="Color.Secondary" Type="ButtonType.Link" To="@($"/profile/{User?.Id}")">
+                    <Icon Name="IconName.Eye" /> View profile as guest
+                </Button>
+            </div>
         </div>
         <Divider />
         <QuoteList />
@@ -58,6 +68,42 @@ else
             </ModalFooter>
         </ModalContent>
     </Modal>
+    <Modal @ref="editProfileModalRef" Closed="ResetEditForm">
+        <ModalContent Centered Size="ModalSize.Large">
+            <ModalHeader>
+                <ModalTitle>Edit Profile</ModalTitle>
+                <CloseButton />
+            </ModalHeader>
+            <ModalBody>
+                <EditForm Model="UserEdit" OnValidSubmit="UpdateUserInfo">
+                    <DataAnnotationsValidator />
+                    <div class="form-floating mb-3">
+                        <InputText id="floatingDisplayName" class="form-control" placeholder="Displayed Name" required
+                            @bind-Value="UserEdit.DisplayedName" />
+                        <label for="floatingDisplayName">Displayed Name</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <InputTextArea id="floatingAboutMe" class="form-control" placeholder="About Me" style="height: 200px;"
+                            @bind-Value="UserEdit.AboutMe" />
+                        <label for="floatingAboutMe">About Me</label>
+                    </div>
+                </EditForm>
+            </ModalBody>
+            <ModalFooter>
+                <Button Color="Color.Secondary" Clicked="@ResetEditForm">Cancel</Button>
+                <Button Color="Color.Primary" Clicked="@UpdateUserInfo" Disabled="@DisabledUpdateButton">
+                    @if (DisabledUpdateButton)
+                    {
+                        <Loading />
+                    }
+                    else
+                    {
+                        <span>Update</span>
+                    }
+                </Button>
+            </ModalFooter>
+        </ModalContent>
+    </Modal>
     <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
 }
 
@@ -66,12 +112,20 @@ else
     private bool loading = true;
     private bool avatarLoading = false;
     private UserInfoDTO? User;
+    private UserInfoDTO? UserEdit;
     private SnackbarStack snackbarStack;
     private Modal deleteAvatarModalRef;
+    private Modal editProfileModalRef;
+    private bool DisabledUpdateButton = false;
 
-    private Task ShowModal()
+    private Task ShowDeleteAvatarModal()
     {
         return deleteAvatarModalRef.Show();
+    }
+
+    private Task ShowEditProfileModal()
+    {
+        return editProfileModalRef.Show();
     }
 
     protected override async Task OnInitializedAsync()
@@ -83,6 +137,11 @@ else
         if (response.IsSuccessStatusCode)
         {
             User = await response.Content.ReadFromJsonAsync<UserInfoDTO>();
+            UserEdit = new UserInfoDTO
+            {
+                DisplayedName = User?.DisplayedName,
+                AboutMe = User?.AboutMe
+            };
         }
         loading = false;
     }
@@ -93,10 +152,10 @@ else
     }
 
     private async Task HandleSelectedAvatar(InputFileChangeEventArgs e)
-{
-    var file = e.File;
-    await UploadAvatar(file);
-}
+    {
+        var file = e.File;
+        await UploadAvatar(file);
+    }
 
     private async Task UploadAvatar(IBrowserFile file)
     {
@@ -104,11 +163,14 @@ else
         var content = new MultipartFormDataContent();
         Stream? stream;
         long maxAllowedSize = 3 * 1024 * 1024; // 3MB
-        try {
+        try
+        {
             stream = file.OpenReadStream(maxAllowedSize);
         }
-        catch (Exception) {
-            await snackbarStack.PushAsync($"File size exceeds the limit of {maxAllowedSize / (1024 * 1024)} MB!", SnackbarColor.Danger);
+        catch (Exception)
+        {
+            await snackbarStack.PushAsync($"File size exceeds the limit of {maxAllowedSize / (1024 * 1024)} MB!",
+            SnackbarColor.Danger);
             avatarLoading = false;
             return;
         }
@@ -159,5 +221,41 @@ else
         }
         avatarLoading = false;
         await deleteAvatarModalRef.Hide();
+    }
+    private async Task ResetEditForm()
+    {
+        UserEdit = new UserInfoDTO
+        {
+            DisplayedName = User?.DisplayedName,
+            AboutMe = User?.AboutMe
+        };
+        await editProfileModalRef.Hide();
+    }
+    private async Task UpdateUserInfo()
+    {
+        DisabledUpdateButton = true;
+        var request = new HttpRequestMessage(HttpMethod.Put, "users/change_info");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        request.Content = JsonContent.Create(UserEdit);
+
+        var response = await Http.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            if (User != null && UserEdit != null)
+            {
+                User.DisplayedName = UserEdit.DisplayedName;
+                User.AboutMe = UserEdit.AboutMe;
+            }
+            string successMessage = await response.Content.ReadAsStringAsync();
+            await snackbarStack.PushAsync(successMessage, SnackbarColor.Success);
+            await editProfileModalRef.Hide();
+        }
+        else
+        {
+            string errorMessage = await response.Content.ReadAsStringAsync();
+            await snackbarStack.PushAsync(errorMessage, SnackbarColor.Danger);
+        }
+        DisabledUpdateButton = false;
     }
 }

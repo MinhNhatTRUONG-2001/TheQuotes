@@ -100,7 +100,16 @@ else
             </ModalBody>
             <ModalFooter>
                 <Button Color="Color.Secondary" Clicked="@(() => deleteAccountModalRef.Hide())">Cancel</Button>
-                <Button Color="Color.Danger" Clicked="@HandleDeleteAccount">Delete</Button>
+                <Button Color="Color.Danger" Clicked="@HandleDeleteAccount" Disabled="@DisabledDeleteButton">
+                    @if (DisabledDeleteButton)
+                    {
+                        <Loading />
+                    }
+                    else
+                    {
+                        <span>Delete</span>
+                    }
+                </Button>
             </ModalFooter>
         </ModalContent>
     </Modal>
@@ -178,8 +187,7 @@ else
             var response = await Http.SendAsync(request);
             if (response.IsSuccessStatusCode)
             {
-                SuccessMessage = response.Content.ReadAsStringAsync().Result;
-                await snackbarStack.PushAsync(SuccessMessage, SnackbarColor.Success);
+                await snackbarStack.PushAsync("Account deleted successfully!", SnackbarColor.Success);
                 await Task.Delay(1000);
                 TokenService.SetToken(null);
                 NavigationManager.NavigateTo("/");
