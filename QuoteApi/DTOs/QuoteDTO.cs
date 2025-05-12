@@ -8,4 +8,5 @@ public class QuoteDTO
     public UserInfoDTO? User { get; set; }
     public string? Source { get; set; }
     public string CreatedAt { get; set; }
+    public FavouriteQuoteDTO? Favourite { get; set; }
 }

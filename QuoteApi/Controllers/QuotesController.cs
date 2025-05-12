@@ -19,14 +19,31 @@ namespace QuoteApi.Controllers
 
         // GET: quotes
         [HttpGet]
-        public async Task<ActionResult<List<QuoteDTO>>> GetTop5LatestSavedQuotes()
+        public async Task<ActionResult<List<QuoteDTO>>> GetTop5LatestSavedQuotes([FromHeader(Name = "Authorization")] string? token = "")
         {
             if (_context.Quotes == null)
             {
                 return NotFound();
             }
+            int userId = -1;
+            if (token != "")
+            {
+                if (token.Contains("Bearer "))
+                {
+                    token = token.Split("Bearer ")[1];
+                }
+                try
+                {
+                    userId = JwtTokenDecoder.GetUserIdFromToken(token);
+                }
+                catch
+                {
+                    return BadRequest("Invalid token.");
+                }
+            }
             var top5Quotes = await _context.Quotes
                             .Include(q => q.User)
+                            .Include(q => q.id_favourite_quotes_quote_id)
                             .OrderByDescending(q => q.created_at)
                             .Take(5)
                             .ToListAsync();
@@ -53,6 +70,20 @@ namespace QuoteApi.Controllers
                     },
                     CreatedAt = quote.created_at.ToString("yyyy-MM-dd HH:mm")
                 };
+                if (token != "")
+                {
+                    var favouriteQuote = quote.id_favourite_quotes_quote_id.FirstOrDefault(q => q.user_id == userId);
+                    if (favouriteQuote != null)
+                    {
+                        quoteDto.Favourite = new FavouriteQuoteDTO
+                        {
+                            Id = favouriteQuote.id.ToString(),
+                            UserId = favouriteQuote.user_id,
+                            QuoteId = favouriteQuote.quote_id,
+                            SavedAt = favouriteQuote.saved_at.ToString("yyyy-MM-dd HH:mm")
+                        };
+                    }
+                }
                 top5QuotesDto.Add(quoteDto);
             }
             return top5QuotesDto;
@@ -60,12 +91,29 @@ namespace QuoteApi.Controllers
 
         // GET: quotes/user/3
         [HttpGet("user/{userId}")]
-        public async Task<ActionResult<List<QuoteDTO>>> GetQuotesByUserId(int userId)
+        public async Task<ActionResult<List<QuoteDTO>>> GetQuotesByUserId(int userId, [FromHeader(Name = "Authorization")] string? token = "")
         {
             if (_context.Quotes == null)
             {
                 return NotFound();
             }
+            int tokenUserId = -1;
+            if (token != "")
+            {
+                if (token.Contains("Bearer "))
+                {
+                    token = token.Split("Bearer ")[1];
+                }
+                try
+                {
+                    tokenUserId = JwtTokenDecoder.GetUserIdFromToken(token);
+                }
+                catch
+                {
+                    return BadRequest("Invalid token.");
+                }
+            }
+
             var quotes = await _context.Quotes
                         .Include(q => q.User)
                         .Where(q => q.user_id == userId)
@@ -95,6 +143,20 @@ namespace QuoteApi.Controllers
                     },
                     CreatedAt = quote.created_at.ToString("yyyy-MM-dd HH:mm")
                 };
+                if (token != "")
+                {
+                    var favouriteQuote = quote.id_favourite_quotes_quote_id.FirstOrDefault(q => q.user_id == tokenUserId);
+                    if (favouriteQuote != null)
+                    {
+                        quoteDto.Favourite = new FavouriteQuoteDTO
+                        {
+                            Id = favouriteQuote.id.ToString(),
+                            UserId = favouriteQuote.user_id,
+                            QuoteId = favouriteQuote.quote_id,
+                            SavedAt = favouriteQuote.saved_at.ToString("yyyy-MM-dd HH:mm")
+                        };
+                    }
+                }
                 quotesDto.Add(quoteDto);
             }
             return quotesDto;
@@ -102,12 +164,29 @@ namespace QuoteApi.Controllers
 
         // GET: quotes/21
         [HttpGet("{id}")]
-        public async Task<ActionResult<QuoteDTO>> GetQuote(int id)
+        public async Task<ActionResult<QuoteDTO>> GetQuote(int id, [FromHeader(Name = "Authorization")] string? token = "")
         {
             if (_context.Quotes == null)
             {
                 return NotFound();
             }
+            int userId = -1;
+            if (token != "")
+            {
+                if (token.Contains("Bearer "))
+                {
+                    token = token.Split("Bearer ")[1];
+                }
+                try
+                {
+                    userId = JwtTokenDecoder.GetUserIdFromToken(token);
+                }
+                catch
+                {
+                    return BadRequest("Invalid token.");
+                }
+            }
+
             var quote = await _context.Quotes.Include(q => q.User).FirstOrDefaultAsync(q => q.id == id);
 
             if (quote == null)
@@ -130,6 +209,20 @@ namespace QuoteApi.Controllers
                 },
                 CreatedAt = quote.created_at.ToString("yyyy-MM-dd HH:mm")
             };
+            if (token != "")
+            {
+                var favouriteQuote = quote.id_favourite_quotes_quote_id.FirstOrDefault(q => q.user_id == userId);
+                if (favouriteQuote != null)
+                {
+                    quoteDto.Favourite = new FavouriteQuoteDTO
+                    {
+                        Id = favouriteQuote.id.ToString(),
+                        UserId = favouriteQuote.user_id,
+                        QuoteId = favouriteQuote.quote_id,
+                        SavedAt = favouriteQuote.saved_at.ToString("yyyy-MM-dd HH:mm")
+                    };
+                }
+            }
             return quoteDto;
         }
 
@@ -137,11 +230,28 @@ namespace QuoteApi.Controllers
         [HttpGet("search")]
         public async Task<ActionResult<List<QuoteDTO>>> SearchQuotes(
             [FromQuery] string? content, [FromQuery] string? who_said, [FromQuery] string? start_said_date, [FromQuery] string? end_said_date,
-            [FromQuery] string? username, [FromQuery] string? displayed_name, [FromQuery] string? start_creation_date, [FromQuery] string? end_creation_date)
+            [FromQuery] string? username, [FromQuery] string? displayed_name, [FromQuery] string? start_creation_date, [FromQuery] string? end_creation_date,
+            [FromHeader(Name = "Authorization")] string? token = "")
         {
             if (_context.Quotes == null)
             {
                 return NotFound();
+            }
+            int userId = -1;
+            if (token != "")
+            {
+                if (token.Contains("Bearer "))
+                {
+                    token = token.Split("Bearer ")[1];
+                }
+                try
+                {
+                    userId = JwtTokenDecoder.GetUserIdFromToken(token);
+                }
+                catch
+                {
+                    return BadRequest("Invalid token.");
+                }
             }
 
             var quotes = await _context.Quotes.Include(q => q.User).ToListAsync();
@@ -205,6 +315,20 @@ namespace QuoteApi.Controllers
                     },
                     CreatedAt = quote.created_at.ToString("yyyy-MM-dd HH:mm")
                 };
+                if (token != "")
+                {
+                    var favouriteQuote = quote.id_favourite_quotes_quote_id.FirstOrDefault(q => q.user_id == userId);
+                    if (favouriteQuote != null)
+                    {
+                        quoteDto.Favourite = new FavouriteQuoteDTO
+                        {
+                            Id = favouriteQuote.id.ToString(),
+                            UserId = favouriteQuote.user_id,
+                            QuoteId = favouriteQuote.quote_id,
+                            SavedAt = favouriteQuote.saved_at.ToString("yyyy-MM-dd HH:mm")
+                        };
+                    }
+                }
                 quotesDto.Add(quoteDto);
             }
             return quotesDto;
@@ -237,7 +361,15 @@ namespace QuoteApi.Controllers
             }
 
             var quote = await _context.Quotes.FindAsync(id);
-            int userId = JwtTokenDecoder.GetUserIdFromToken(token);
+            int userId;
+            try
+            {
+                userId = JwtTokenDecoder.GetUserIdFromToken(token);
+            }
+            catch
+            {
+                return BadRequest("Invalid token.");
+            }
             if (quote == null)
             {
                 return NotFound("Quote not found.");
@@ -253,7 +385,8 @@ namespace QuoteApi.Controllers
             {
                 quote.when_was_said = DateOnly.Parse(quoteDto.When);
             }
-            else {
+            else
+            {
                 quote.when_was_said = null;
             }
             quote.source = quoteDto.Source;
@@ -305,9 +438,18 @@ namespace QuoteApi.Controllers
             {
                 token = token.Split("Bearer ")[1];
             }
-            int userId = JwtTokenDecoder.GetUserIdFromToken(token);
+            int userId;
+            try
+            {
+                userId = JwtTokenDecoder.GetUserIdFromToken(token);
+            }
+            catch
+            {
+                return BadRequest("Invalid token.");
+            }
             Quote quote = new Quote();
-            try {
+            try
+            {
                 quote.quote_content = quoteDto.Quote;
                 quote.who_said = quoteDto.SaidBy;
                 if (quoteDto.When != null)
@@ -366,7 +508,15 @@ namespace QuoteApi.Controllers
             }
 
             var quote = await _context.Quotes.FindAsync(id);
-            int userId = JwtTokenDecoder.GetUserIdFromToken(token);
+            int userId;
+            try
+            {
+                userId = JwtTokenDecoder.GetUserIdFromToken(token);
+            }
+            catch
+            {
+                return BadRequest("Invalid token.");
+            }
 
             if (quote == null)
             {
