@@ -1,7 +1,25 @@
-﻿<Card Shadow="Shadow.Default" Margin="Margin.Is3.OnY">
+﻿@inject IJSRuntime JS
+@inject HttpClient Http
+
+<Card Shadow="Shadow.Default" Margin="Margin.Is3.OnY">
     <CardHeader Background="Background.Transparent">
-        <img src="@(!string.IsNullOrWhiteSpace(Quote.User?.AvatarUrl) ? Quote.User?.AvatarUrl : "blank-avatar.png")" alt="@Quote.User.DisplayedName" style="width: 50px; height: 50px" />
-        <a href="@($"/profile/{Quote.User.Id}")"><b>@Quote.User.DisplayedName</b></a> (@Quote.User.Username) &bull; @Quote.CreatedAt
+        <div class="d-flex justify-content-between gap-2">
+            <div>
+                <img src="@(!string.IsNullOrWhiteSpace(Quote.User?.AvatarUrl) ? Quote.User?.AvatarUrl : "blank-avatar.png")" alt="@Quote.User.DisplayedName" style="width: 50px; height: 50px" />
+                <a href="@($"/profile/{Quote.User.Id}")"><b>@Quote.User.DisplayedName</b></a> (@Quote.User.Username) &bull; @Quote.CreatedAt
+            </div>
+            @if (token != null)
+            {
+                <button class="btn btn-primary" @onclick="ToggleFavourite" disabled="@DisabledFavouriteButton">
+                    @if (Quote.Favourite == null) {
+                        <span><i class="fa-solid fa-heart"></i> Save</span>
+                    }
+                    else {
+                        <span><i class="fa-regular fa-heart"></i> Unsave</span>
+                    }
+                </button>
+            }
+        </div>
     </CardHeader>
     <CardBody>
         <CardText TextAlignment="TextAlignment.Center" Margin="Margin.Is3.OnY">
@@ -31,6 +49,7 @@
         </CardFooter>
     }
 </Card>
+<SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
 
 @code {
     [Parameter]
@@ -39,4 +58,62 @@
     public string? EditLink { get; set; }
     [Parameter]
     public string? DeleteLink { get; set; }
+    private string? token;
+    private SnackbarStack snackbarStack;
+    private bool DisabledFavouriteButton = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
+        Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+    }
+    private async Task ToggleFavourite()
+    {
+        DisabledFavouriteButton = true;
+
+        try
+        {
+            if (Quote.Favourite == null)
+            {
+                var newFavourite = new FavouriteQuoteDTO 
+                {
+                    QuoteId = Quote.Id,
+                };
+                var response = await Http.PostAsJsonAsync($"/favourite_quotes", newFavourite);
+                if (response.IsSuccessStatusCode)
+                {
+                    var favourite = await response.Content.ReadFromJsonAsync<FavouriteQuoteDTO>();
+                    Quote.Favourite = favourite;
+                    await snackbarStack.PushAsync("Quote added to Favourites!", SnackbarColor.Success);
+                }
+                else
+                {
+                    var errorMessage = await response.Content.ReadAsStringAsync();
+                    await snackbarStack.PushAsync(errorMessage, SnackbarColor.Danger);
+                }
+            }
+            else {
+                var response = await Http.DeleteAsync($"/favourite_quotes/{Quote.Favourite.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    Quote.Favourite = null;
+                    var successMessage = await response.Content.ReadAsStringAsync();
+                    await snackbarStack.PushAsync(successMessage, SnackbarColor.Success);
+                }
+                else
+                {
+                    var errorMessage = await response.Content.ReadAsStringAsync();
+                    await snackbarStack.PushAsync(errorMessage, SnackbarColor.Danger);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await snackbarStack.PushAsync(ex.Message, SnackbarColor.Danger);
+        }
+        finally
+        {
+            DisabledFavouriteButton = false;
+        }
+    }
 }

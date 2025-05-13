@@ -95,6 +95,6 @@ else {
         token = null;
         await JS.InvokeVoidAsync("cookieManager.deleteCookie", "token");
         TokenService.SetToken(null);
-        NavigationManager.NavigateTo("/");
+        NavigationManager.NavigateTo("/login");
     }
 }

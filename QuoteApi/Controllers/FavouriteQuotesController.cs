@@ -20,7 +20,7 @@ namespace QuoteApi.Controllers
         // POST: favourite_quotes
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<IActionResult> AddFavouriteQuote(FavouriteQuoteDTO favouriteQuoteDto, [FromHeader(Name = "Authorization")] string token = "")
+        public async Task<ActionResult<FavouriteQuoteDTO>> AddFavouriteQuote(FavouriteQuoteDTO favouriteQuoteDto, [FromHeader(Name = "Authorization")] string token = "")
         {
             if (_context.FavouriteQuotes == null)
             {
@@ -52,8 +52,13 @@ namespace QuoteApi.Controllers
             {
                 return BadRequest("Error while saving your favourite quote.");
             }
-
-            return Ok("Quote added to your favourites.");
+            FavouriteQuoteDTO favouriteQuoteResponse = new FavouriteQuoteDTO {
+                Id = favouriteQuote.id.ToString(),
+                UserId = favouriteQuote.user_id,
+                QuoteId = favouriteQuote.quote_id,
+                SavedAt = favouriteQuote.saved_at.ToString("yyyy-MM-dd HH:mm")
+            };
+            return favouriteQuoteResponse;
         }
 
         // DELETE: favourite_quotes/e963411f-0f3f-4906-bbbd-9e9a712acfc9
@@ -94,7 +99,7 @@ namespace QuoteApi.Controllers
             _context.FavouriteQuotes.Remove(favouriteQuote);
             await _context.SaveChangesAsync();
 
-            return Ok("Favourite quote deleted.");
+            return Ok("Favourite quote unsaved!");
         }
     }
 }

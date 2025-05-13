@@ -26,12 +26,12 @@ namespace QuoteApi.Controllers
                 return NotFound();
             }
             int userId = -1;
+            if (token.Contains("Bearer "))
+            {
+                token = token.Split("Bearer ")[1];
+            }
             if (token != "")
             {
-                if (token.Contains("Bearer "))
-                {
-                    token = token.Split("Bearer ")[1];
-                }
                 try
                 {
                     userId = JwtTokenDecoder.GetUserIdFromToken(token);
@@ -98,12 +98,12 @@ namespace QuoteApi.Controllers
                 return NotFound();
             }
             int tokenUserId = -1;
+            if (token.Contains("Bearer "))
+            {
+                token = token.Split("Bearer ")[1];
+            }
             if (token != "")
             {
-                if (token.Contains("Bearer "))
-                {
-                    token = token.Split("Bearer ")[1];
-                }
                 try
                 {
                     tokenUserId = JwtTokenDecoder.GetUserIdFromToken(token);
@@ -116,6 +116,7 @@ namespace QuoteApi.Controllers
 
             var quotes = await _context.Quotes
                         .Include(q => q.User)
+                        .Include(q => q.id_favourite_quotes_quote_id)
                         .Where(q => q.user_id == userId)
                         .OrderByDescending(q => q.created_at)
                         .ToListAsync();
@@ -171,12 +172,12 @@ namespace QuoteApi.Controllers
                 return NotFound();
             }
             int userId = -1;
+            if (token.Contains("Bearer "))
+            {
+                token = token.Split("Bearer ")[1];
+            }
             if (token != "")
             {
-                if (token.Contains("Bearer "))
-                {
-                    token = token.Split("Bearer ")[1];
-                }
                 try
                 {
                     userId = JwtTokenDecoder.GetUserIdFromToken(token);
@@ -187,7 +188,10 @@ namespace QuoteApi.Controllers
                 }
             }
 
-            var quote = await _context.Quotes.Include(q => q.User).FirstOrDefaultAsync(q => q.id == id);
+            var quote = await _context.Quotes
+                .Include(q => q.User)
+                .Include(q => q.id_favourite_quotes_quote_id)
+                .FirstOrDefaultAsync(q => q.id == id);
 
             if (quote == null)
             {
@@ -238,12 +242,12 @@ namespace QuoteApi.Controllers
                 return NotFound();
             }
             int userId = -1;
+            if (token.Contains("Bearer "))
+            {
+                token = token.Split("Bearer ")[1];
+            }
             if (token != "")
             {
-                if (token.Contains("Bearer "))
-                {
-                    token = token.Split("Bearer ")[1];
-                }
                 try
                 {
                     userId = JwtTokenDecoder.GetUserIdFromToken(token);
@@ -254,7 +258,10 @@ namespace QuoteApi.Controllers
                 }
             }
 
-            var quotes = await _context.Quotes.Include(q => q.User).ToListAsync();
+            var quotes = await _context.Quotes
+                .Include(q => q.User)
+                .Include(q => q.id_favourite_quotes_quote_id)
+                .ToListAsync();
             if (quotes == null)
             {
                 return NotFound("No quotes found.");

@@ -150,13 +150,12 @@ else
     protected override async Task OnInitializedAsync()
     {
         token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        }
         quotes = await Http.GetFromJsonAsync<List<QuoteDTO>>("quotes");
         loading = false;
-    }
-    private async Task HandleLogout()
-    {
-        token = null;
-        await JS.InvokeVoidAsync("cookieManager.deleteCookie", "token");
     }
 
     private async Task SearchQuotesAsync()
