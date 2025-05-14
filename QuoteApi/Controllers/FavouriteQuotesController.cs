@@ -17,6 +17,71 @@ namespace QuoteApi.Controllers
             _context = context;
         }
 
+        // GET: favourite_quotes
+        [HttpGet]
+        public async Task<ActionResult<List<QuoteDTO>>> GetUserFavouriteQuotes([FromHeader(Name = "Authorization")] string token = "") {
+            if (_context.FavouriteQuotes == null)
+            {
+                return NotFound();
+            }
+            if (token.Contains("Bearer "))
+            {
+                token = token.Split("Bearer ")[1];
+            }
+            int userId;
+            try
+            {
+                userId = JwtTokenDecoder.GetUserIdFromToken(token);
+            }
+            catch
+            {
+                return BadRequest("Invalid token.");
+            }
+
+            var favouriteQuotes = await _context.FavouriteQuotes
+                .Where(q => q.user_id == userId)
+                .OrderByDescending(q => q.saved_at)
+                .ToListAsync();
+
+            List<QuoteDTO> favouriteQuotesResponse = new List<QuoteDTO>();
+            foreach (var favouriteQuote in favouriteQuotes)
+            {
+                var quote = await _context.Quotes
+                    .Include(q => q.User)
+                    .Where(q => q.id == favouriteQuote.quote_id)
+                    .FirstOrDefaultAsync();
+                if (quote != null)
+                {
+                    QuoteDTO quoteResponse = new QuoteDTO
+                    {
+                        Id = quote.id,
+                        Quote = quote.quote_content,
+                        SaidBy = quote.who_said,
+                        When = quote.when_was_said?.ToString("yyyy-MM-dd"),
+                        User = new UserInfoDTO
+                        {
+                            Id = quote.User.id,
+                            Username = quote.User.username,
+                            DisplayedName = quote.User.displayed_name,
+                            AvatarUrl = quote.User.avatar_url
+                        },
+                        Source = quote.source,
+                        CreatedAt = quote.created_at.ToString("yyyy-MM-dd HH:mm"),
+                        Favourite = new FavouriteQuoteDTO
+                        {
+                            Id = favouriteQuote.id.ToString(),
+                            UserId = favouriteQuote.user_id,
+                            QuoteId = favouriteQuote.quote_id,
+                            SavedAt = favouriteQuote.saved_at.ToString("yyyy-MM-dd HH:mm")
+                        }
+                    };
+                    favouriteQuotesResponse.Add(quoteResponse);
+                }
+            }
+
+            return Ok(favouriteQuotesResponse);
+        }
+
         // POST: favourite_quotes
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
@@ -58,7 +123,7 @@ namespace QuoteApi.Controllers
                 QuoteId = favouriteQuote.quote_id,
                 SavedAt = favouriteQuote.saved_at.ToString("yyyy-MM-dd HH:mm")
             };
-            return favouriteQuoteResponse;
+            return Ok(favouriteQuoteResponse);
         }
 
         // DELETE: favourite_quotes/e963411f-0f3f-4906-bbbd-9e9a712acfc9

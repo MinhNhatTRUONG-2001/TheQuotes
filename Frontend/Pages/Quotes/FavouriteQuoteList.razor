@@ -1,0 +1,48 @@
+@page "/my-quotes/favourites"
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+@if (loading)
+{
+    <Loading />
+}
+else
+{
+    @if (string.IsNullOrEmpty(token))
+    {
+        <h2>You need to login to manage your favourite quotes!</h2>
+    }
+    else
+    {
+        <div class="mt-4 mb-2">
+            <h2>My Favourite Quotes</h2>
+            @if (quotes != null)
+            {
+                @foreach (var quote in quotes)
+                {
+                    <QuoteItem Quote=quote />
+                }
+            }
+        </div>
+    }
+}
+
+@code {
+    private string? token;
+    private bool loading = true;
+    private List<QuoteDTO>? quotes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
+        var request = new HttpRequestMessage(HttpMethod.Get, "favourite_quotes");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        var response = await Http.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            quotes = await response.Content.ReadFromJsonAsync<List<QuoteDTO>>();
+        }
+        loading = false;
+    }
+}

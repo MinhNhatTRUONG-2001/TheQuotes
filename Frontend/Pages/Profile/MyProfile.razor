@@ -49,6 +49,10 @@ else
                     <Icon Name="IconName.Eye" /> View profile as guest
                 </Button>
             </div>
+            <Divider />
+            <Button Color="Color.Primary" Type="ButtonType.Link" To="@("/my-quotes/favourites")">
+                <i class="fa-solid fa-heart"></i> Favourite quotes
+            </Button>
         </div>
         <Divider />
         <QuoteList />

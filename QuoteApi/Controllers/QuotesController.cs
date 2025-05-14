@@ -26,9 +26,9 @@ namespace QuoteApi.Controllers
                 return NotFound();
             }
             int userId = -1;
-            if (token.Contains("Bearer "))
+            if (token.StartsWith("Bearer"))
             {
-                token = token.Split("Bearer ")[1];
+                token = token.Substring("Bearer".Length).Trim();
             }
             if (token != "")
             {
@@ -98,9 +98,9 @@ namespace QuoteApi.Controllers
                 return NotFound();
             }
             int tokenUserId = -1;
-            if (token.Contains("Bearer "))
+            if (token.StartsWith("Bearer"))
             {
-                token = token.Split("Bearer ")[1];
+                token = token.Substring("Bearer".Length).Trim();
             }
             if (token != "")
             {
@@ -172,9 +172,9 @@ namespace QuoteApi.Controllers
                 return NotFound();
             }
             int userId = -1;
-            if (token.Contains("Bearer "))
+            if (token.StartsWith("Bearer"))
             {
-                token = token.Split("Bearer ")[1];
+                token = token.Substring("Bearer".Length).Trim();
             }
             if (token != "")
             {
@@ -242,11 +242,11 @@ namespace QuoteApi.Controllers
                 return NotFound();
             }
             int userId = -1;
-            if (token.Contains("Bearer "))
+            if (token.StartsWith("Bearer"))
             {
-                token = token.Split("Bearer ")[1];
+                token = token.Substring("Bearer".Length).Trim();
             }
-            if (token != "")
+            if (!string.IsNullOrWhiteSpace(token))
             {
                 try
                 {
