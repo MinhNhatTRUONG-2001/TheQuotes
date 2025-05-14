@@ -14,7 +14,8 @@ else
     <div class="mt-4">
         <h3>Search Quotes</h3>
         <div class="form-floating mb-3">
-            <InputText id="floatingQuoteContent" class="form-control" placeholder="Content" @bind-Value="searchModel.QuoteContent" />
+            <InputText id="floatingQuoteContent" class="form-control" placeholder="Content"
+                @bind-Value="searchModel.QuoteContent" />
             <label for="floatingQuoteContent">Quote Content</label>
         </div>
         @if (showMoreSearchCriteria)
@@ -129,7 +130,7 @@ else
     }
     else
     {
-        
+
     }
     <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.BottomEnd" DefaultInterval="3000" />
 }
@@ -150,13 +151,17 @@ else
     protected override async Task OnInitializedAsync()
     {
         token = await JS.InvokeAsync<string>("cookieManager.getCookie", "token");
-        quotes = await Http.GetFromJsonAsync<List<QuoteDTO>>("quotes");
+        var request = new HttpRequestMessage(HttpMethod.Get, "quotes");
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        }
+        var response = await Http.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            quotes = await response.Content.ReadFromJsonAsync<List<QuoteDTO>>();
+        }
         loading = false;
-    }
-    private async Task HandleLogout()
-    {
-        token = null;
-        await JS.InvokeVoidAsync("cookieManager.deleteCookie", "token");
     }
 
     private async Task SearchQuotesAsync()
@@ -182,7 +187,7 @@ else
         if (searchModel.EndCreationDate.HasValue)
             queryParams.Add("end_creation_date", searchModel.EndCreationDate.Value.ToString("yyyy-MM-dd"));
 
-        if (queryParams.Count == 0) 
+        if (queryParams.Count == 0)
         {
             await snackbarStack.PushAsync("Please fill at least one search field.", SnackbarColor.Danger);
             loading = false;
@@ -251,7 +256,16 @@ else
     private async Task ClearAllSearchFields()
     {
         searchModel = new SearchModel();
-        quotes = await Http.GetFromJsonAsync<List<QuoteDTO>>("quotes");
+        var request = new HttpRequestMessage(HttpMethod.Get, "quotes");
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        }
+        var response = await Http.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            quotes = await response.Content.ReadFromJsonAsync<List<QuoteDTO>>();
+        }
         Title = "Latest created quotes";
     }
 

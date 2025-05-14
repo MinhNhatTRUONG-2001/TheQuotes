@@ -16,5 +16,6 @@ namespace QuoteApi.Data
         public string? avatar_url { get; set; }
         public string? about_me { get; set; }
         public ICollection<Quote> quotes { get; set; }
+        public ICollection<FavouriteQuote> id_favourite_quotes_user_id { get; set; }
     }
 }

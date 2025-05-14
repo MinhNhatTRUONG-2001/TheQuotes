@@ -8,13 +8,13 @@
             "name": "C#: QuoteApi Debug",
             "type": "dotnet",
             "request": "launch",
-            "projectPath": "${workspaceFolder}/Frontend/Frontend.csproj"
+            "projectPath": "${workspaceFolder}/QuoteApi/QuoteApi.csproj"
         },
         {
             "name": "C#: Frontend Debug",
             "type": "dotnet",
             "request": "launch",
-            "projectPath": "${workspaceFolder}/QuoteApi/QuoteApi.csproj"
+            "projectPath": "${workspaceFolder}/Frontend/Frontend.csproj"
         },
     ],
     "compounds": [
