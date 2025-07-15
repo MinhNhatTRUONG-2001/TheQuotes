@@ -1,4 +1,6 @@
 # The Quotes v2.0
+<img width="2850" height="1310" alt="image" src="https://github.com/user-attachments/assets/c15d9e31-2de9-4f7c-aec8-01fb8bde1a6d" />
+
 ## Overview
 The project is a .NET application for sharing and reading quotes across users. In the application, users can post any quote that they think it is thought-provoking and interesting. They can also browse and search for quotes posted by other users and save them in their favourite list.
 
